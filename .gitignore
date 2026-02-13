@@ -1,0 +1,266 @@
+# =============================================================================
+# SECURITY: Sensitive Credentials & Keys
+# =============================================================================
+
+# SSH Keys & Certificates
+.ssh/
+ssh/
+*.pem
+*.key
+*.pub
+*.p8
+*.p12
+*.pfx
+*.jks
+
+# GPG Keys & Configuration
+.gnupg/
+gnupg/
+*.gpg
+*.asc
+
+# Private Keys & Tokens (generic)
+*_private*
+*_secret*
+*.secret
+
+# =============================================================================
+# ENVIRONMENT & CONFIGURATION: Machine-Specific & Sensitive
+# =============================================================================
+
+# Environment files (often contain credentials)
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.envrc
+.direnv/
+
+# Credential stores & token files
+.aws/
+aws/
+.credentials
+.kube/
+kube/
+.azure/
+azure/
+.gcloud/
+gcloud/
+.token
+.tokens
+*.token
+*.tokens
+credentials.json
+token.json
+oauth.json
+
+# Local overrides & machine-specific configs
+local.*
+*.local
+machine.*
+*.machine
+override.*
+*.override
+
+# =============================================================================
+# SHELL: History & Session Files
+# =============================================================================
+
+# Bash history
+.bash_history
+.bash_sessions/
+.bash_login
+.bashrc.local
+
+# Zsh history
+.zsh_history
+.zsh_sessions/
+.zhistory
+
+# Fish history
+.fish_history
+.fish_sessions/
+
+# Tcsh history
+.history
+.tcshrc.local
+
+# Shell startup customizations (local only)
+.profile.local
+
+# =============================================================================
+# EDITORS & IDEs: Cache & Metadata
+# =============================================================================
+
+# Vim
+.vim/
+.viminfo
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*~
+.#*
+*.elc
+auto-save-list/
+tramp
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs (IntelliJ, PyCharm, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+*.jdx
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# VSCodium
+.vscodium/
+
+# =============================================================================
+# SYSTEM & OS: Cache, Logs, Temporary Files
+# =============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._.DS_Store
+*.localized
+.Spotlight-V100/
+.Trashes/
+.TemporaryItems/
+Network Trash Folder
+Temporary Items
+
+# Linux
+.cache/
+.local/share/
+.thumbnail*/
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# =============================================================================
+# DEVELOPMENT: Build & Runtime Artifacts
+# =============================================================================
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json.local
+.npm/
+.node_repl_history
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Ruby
+.ruby-version
+.ruby-gemset
+Gemfile.lock
+
+# Go
+vendor/
+*.exe
+*.dll
+
+# Rust
+target/
+Cargo.lock
+
+# =============================================================================
+# LOGS & RUNTIME FILES
+# =============================================================================
+
+*.log
+logs/
+log/
+*.out
+
+# =============================================================================
+# PERSONAL NOTES & TEMPORARY FILES
+# =============================================================================
+
+# Local notes and task tracking (per user request)
+note.md
+todo.md
+
+# General temporary files
+*.tmp
+*.temp
+*.bak
+
+# =============================================================================
+# DEPRECATED: Old Configuration Backups
+# =============================================================================
+
+*.old
+*.orig
+.backup/
+backups/
+
+# =============================================================================
+# FUTURE-PROOFING: Catch-All Patterns
+# =============================================================================
+
+# Hidden local configuration
+.local/
+.config/*/local/
+
+# Any file ending with common local markers
+*.LOCAL
+*.BACKUP
+*.PRIVATE
+
+# Sensitive database files
+*.db.local
+*.sqlite.local
+*.sqlite3.local
+
+# Private cloud configs
+*.googlerc
+*.heroku
+.heroku/

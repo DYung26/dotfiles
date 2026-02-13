@@ -2,6 +2,11 @@
 # ~/.bashrc
 #
 
+# Enable git branch in prompt
+if [ -f /usr/share/git/completion/git-prompt.sh ]; then
+    . /usr/share/git/completion/git-prompt.sh
+fi
+
 # If not running interactively, don't do anything
 [[ $- != *i* ]] && return
 
@@ -15,7 +20,7 @@ export NVM_DIR="$HOME/.nvm"
 export PATH="$PATH:/usr/bin"
 
 # export PS1='\[\e[0;36m\][\u@\h]:\w\$ \[\e[0m\]'
-export PS1='\[\e[0;36m\][\u@\h \W]\$ \[\e[0m\]'
+export PS1='\[\e[0;36m\][\u@\h \W$(__git_ps1 " (%s)")]\$ \[\e[0m\]'
 # export PS1=[\u@\h \W]\$
 
 # pnpm

@@ -19,6 +19,12 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 export PATH="$PATH:/usr/bin"
 
+# Git prompt settings
+GIT_PS1_SHOWDIRTYSTATE=1
+GIT_PS1_SHOWSTASHSTATE=1
+GIT_PS1_SHOWUNTRACKEDFILES=1
+GIT_PS1_SHOWUPSTREAM="auto"
+
 # export PS1='\[\e[0;36m\][\u@\h]:\w\$ \[\e[0m\]'
 export PS1='\[\e[0;36m\][\u@\h \W$(__git_ps1 " (%s)")]\$ \[\e[0m\]'
 # export PS1=[\u@\h \W]\$

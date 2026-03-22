@@ -43,8 +43,7 @@ esac
 # Enable ble.sh (bash autosuggestions)
 if [[ $- == *i* ]] && [[ -f ~/.local/share/blesh/ble.sh ]]; then
   source ~/.local/share/blesh/ble.sh
+  type ble-face &>/dev/null && ble-face auto_complete='fg=242' # ,bg=235'
 fi
-
-ble-face auto_complete='fg=242' # ,bg=235'
 
 export GPG_TTY=$(tty)

@@ -324,6 +324,7 @@ require('nvim-tree').setup({
   filters = {
     dotfiles = false,
     git_ignored = false,
+    custom = { ".*sync-conflict.*" },
   },
   git = {
     enable = true,

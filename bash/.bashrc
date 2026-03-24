@@ -2,6 +2,10 @@
 # ~/.bashrc
 #
 
+if [ -n "$CODESPACE_NAME" ]; then
+    stty intr ^T
+fi
+
 # Enable git branch in prompt
 if [ -f /usr/share/git/completion/git-prompt.sh ]; then
     . /usr/share/git/completion/git-prompt.sh

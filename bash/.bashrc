@@ -2,10 +2,6 @@
 # ~/.bashrc
 #
 
-if [ -n "$CODESPACE_NAME" ]; then
-    stty intr ^T
-fi
-
 # Enable git branch in prompt
 if [ -f /usr/share/git/completion/git-prompt.sh ]; then
     . /usr/share/git/completion/git-prompt.sh
@@ -19,9 +15,14 @@ alias grep='grep --color=auto'
 PS1='[\u@\h \W]\$ '
 
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-export PATH="$PATH:/usr/bin"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+    \. "$NVM_DIR/nvm.sh"  # This loads nvm
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+    nvm use --lts > /dev/null
+else
+    # export PATH="$PATH:/usr/bin"
+    :
+fi
 
 # Git prompt settings
 GIT_PS1_SHOWDIRTYSTATE=1
@@ -48,6 +49,10 @@ esac
 if [[ $- == *i* ]] && [[ -f ~/.local/share/blesh/ble.sh ]]; then
   source ~/.local/share/blesh/ble.sh
   type ble-face &>/dev/null && ble-face auto_complete='fg=242' # ,bg=235'
+fi
+
+if [ -n "$CODESPACE_NAME" ]; then
+    stty intr ^T
 fi
 
 export GPG_TTY=$(tty)

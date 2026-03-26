@@ -49,7 +49,7 @@ esac
 #   . /usr/share/bash-completion/bash_completion
 
 # Enable ble.sh (bash autosuggestions)
-if [[ $- == *i* ]] && [[ -f ~/.local/share/blesh/ble.sh ]]; then
+if [[ -z "$CODESPACE_NAME" ]] && [[ $- == *i* ]] && [[ -f ~/.local/share/blesh/ble.sh ]]; then
   source ~/.local/share/blesh/ble.sh
   type ble-face &>/dev/null && ble-face auto_complete='fg=242' # ,bg=235'
 fi

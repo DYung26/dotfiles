@@ -1,4 +1,5 @@
 *sync-conflict*
 *.stfolder/*
+.stignore
 todo.md
 note.md

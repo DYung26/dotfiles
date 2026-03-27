@@ -54,8 +54,10 @@ if [[ -z "$CODESPACE_NAME" ]] && [[ $- == *i* ]] && [[ -f ~/.local/share/blesh/b
   type ble-face &>/dev/null && ble-face auto_complete='fg=242' # ,bg=235'
 fi
 
-if [ -n "$CODESPACE_NAME" ]; then
-    stty intr ^T
-fi
+# if [ -n "$CODESPACE_NAME" ]; then
+#     stty intr ^T
+# fi
 
 export GPG_TTY=$(tty)
+
+unset GITHUB_TOKEN

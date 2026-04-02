@@ -225,6 +225,7 @@ vim.opt.sessionoptions = {
   "buffers", "curdir", "tabpages", "winsize",
   "help", "globals"
 }
+vim.opt.termguicolors = true
 vim.opt.sessionoptions:append("localoptions")
 -- vim.opt.statusline:append " %y"
 vim.opt.statusline = "%f %m %r %h %w [%{&filetype}] %=%-14.(%l,%c%v%) %p"

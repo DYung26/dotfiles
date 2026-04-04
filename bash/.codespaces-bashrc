@@ -165,4 +165,6 @@ run_cpp_script() {
     g++ -x c++ -o /tmp/temp.out "$1" -lcurl -ljsoncpp && /tmp/temp.out && rm /tmp/temp.out
 }
 
+export GPG_TTY=$(tty)
+
 unset GITHUB_TOKEN

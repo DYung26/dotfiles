@@ -7,3 +7,5 @@
 export PATH="$PATH:/home/dyung/.dotnet/tools"
 # Add Go binaries
 export PATH="$PATH:$HOME/go/bin"
+
+. "$HOME/.local/bin/env"

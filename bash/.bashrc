@@ -61,3 +61,5 @@ fi
 export GPG_TTY=$(tty)
 
 unset GITHUB_TOKEN
+
+. "$HOME/.local/bin/env"

@@ -41,10 +41,10 @@ config.enable_kitty_keyboard = true
 -- platform-specific overrides
 if wezterm.target_triple:find("windows") then
   -- Use Git Bash instead of cmd.exe
-  config.default_prog = {
+  --[[ config.default_prog = {
     "C:/Program Files/Git/bin/bash.exe",
     "-l",
-  }
+  } ]]
 
   -- Windows-specific background image
   config.window_background_image = "backgrounds/win-bg.jpg"

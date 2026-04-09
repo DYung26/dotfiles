@@ -30,6 +30,7 @@ gnupg/
 
 # Environment files (often contain credentials)
 .env
+.env.*
 .env.local
 .env.*.local
 .env.development.local
@@ -37,6 +38,10 @@ gnupg/
 .env.production.local
 *.envrc
 .direnv/
+
+# Allow example env files
+!.env.example
+!.env.*.example
 
 # Credential stores & token files
 .aws/

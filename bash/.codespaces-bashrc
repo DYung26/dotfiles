@@ -159,7 +159,8 @@ if [[ "$TERM" == "xterm" ]]; then
     # Append to PROMPT_COMMAND to call precmd before displaying the prompt
     PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND; }precmd"
 fi
-. "$HOME/.cargo/env"
+
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
 run_cpp_script() {
     g++ -x c++ -o /tmp/temp.out "$1" -lcurl -ljsoncpp && /tmp/temp.out && rm /tmp/temp.out

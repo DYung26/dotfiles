@@ -1,0 +1,9 @@
+# ble.sh configuration file
+# Ensure Ctrl+J works for accepting/running multi-line input
+
+# Set keybindings for emacs mode (default)
+ble-bind -m emacs -f 'C-j'   'accept-line'
+ble-bind -m emacs -f 'C-RET' 'accept-line'
+
+# Also set for vi insert mode if user switches to vi mode
+ble-bind -m vi_imap -f 'C-j' 'accept-line'

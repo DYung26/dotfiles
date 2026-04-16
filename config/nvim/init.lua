@@ -686,8 +686,19 @@ vim.api.nvim_create_autocmd("sessionloadpost", {
 
 -- keybinds for lsp
 -- telescope keybinds - https://github.com/nvim-telescope/telescope.nvim?tab=readme-ov-file#pickers
-vim.keymap.set('n', '<leader>ff', require('telescope.builtin').find_files, {})                -- lists files in cd
-vim.keymap.set('n', '<leader>fg', require('telescope.builtin').live_grep, {})                 -- live search string in cd
+vim.keymap.set('n', '<leader>ff', function()
+  require('telescope.builtin').find_files({
+    hidden = true, -- include dotfiles
+  })
+end, { desc = "find files including hidden" })
+
+vim.keymap.set('n', '<leader>fg', function()
+  require('telescope.builtin').live_grep({
+    additional_args = function()
+      return { "--hidden", "--glob", "!**/.git/*" }
+    end,
+  })
+end, { desc = "live grep including hidden, excluding .git" })
 vim.keymap.set('n', '<leader>fb', require('telescope.builtin').buffers, {})                   -- lists open buffers in cnvim instance
 vim.keymap.set('n', '<leader>fh', require('telescope.builtin').help_tags, {})                 -- lists available help tags
 vim.keymap.set('n', '<leader>fs', require('telescope.builtin').current_buffer_fuzzy_find, {}) -- live fuzzy search in cbuffer
@@ -713,16 +724,45 @@ vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, { desc = "rename symbol" }
 -- keybinding for replacing in current file and entire codebase
 
 -- nnoremap <leader>r :%s/<c-r><c-w>//g<left><left>
+local function escape_vim_pattern(text)
+  return text:gsub("([\\/%^%$%.%*%~%[%]])", "\\%1")
+end
+
+local function escape_vim_replacement(text)
+  return text:gsub("([\\&~])", "\\%1")
+end
+
 -- replace word under cursor in current buffer
 vim.keymap.set("n", "<leader>r", function()
   local word = vim.fn.expand("<cword>")
-  vim.ui.input({ prompt = "replace '" .. word .. "' with: " }, function(repl)
-    if repl then
-      -- perform substitution globally
-      vim.cmd(string.format("%%s/%s/%s/g", word, repl))
+
+  vim.ui.input({ prompt = "replace '" .. word .. "' with (empty = delete): " }, function(repl)
+    if repl ~= nil then
+      local escaped_word = escape_vim_pattern(word)
+      local escaped_repl = escape_vim_replacement(repl)
+      vim.cmd(string.format([[%%s/\<%s\>/%s/g]], escaped_word, escaped_repl))
     end
   end)
-end, { desc = "replace word under cursor in file interactively" })
+end, { desc = "replace word under cursor in file" })
+
+-- replace visual selection in current buffer
+vim.keymap.set("x", "<leader>r", function()
+  local old_reg = vim.fn.getreg('"')
+  local old_regtype = vim.fn.getregtype('"')
+
+  vim.cmd([[normal! "vy]])
+  local selection = vim.fn.getreg("v")
+
+  vim.ui.input({ prompt = "replace selection with (empty = delete): ", default = selection }, function(repl)
+    if repl ~= nil then
+      local escaped_selection = escape_vim_pattern(selection)
+      local escaped_repl = escape_vim_replacement(repl)
+      vim.cmd(string.format([[%%s/%s/%s/g]], escaped_selection, escaped_repl))
+    end
+
+    vim.fn.setreg('"', old_reg, old_regtype)
+  end)
+end, { desc = "replace visual selection in file" })
 
 -- nnoremap <leader>g :grep -r --exclude=.gitignore "<c-r><c-w>" . <cr>:cfdo %s/<c-r><c-w>//gc | update<cr>
 -- project-wide search and replace with confirmation

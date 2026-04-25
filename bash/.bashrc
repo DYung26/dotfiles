@@ -67,5 +67,4 @@ unset GITHUB_TOKEN
 
 . "$HOME/.local/bin/env"
 
-
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"

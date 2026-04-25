@@ -1,4 +1,5 @@
 *sync-conflict*
+*syncthing*
 *.stfolder/*
 .stignore
 todo.md

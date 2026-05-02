@@ -12,6 +12,10 @@ fi
 
 alias ls='ls --color=auto'
 alias grep='grep --color=auto'
+alias gh-26='GH_CONFIG_DIR=~/.config/gh-dyung26 gh'
+alias gh-06='GH_CONFIG_DIR=~/.config/gh-dyung06 gh'
+alias gh-df='GH_CONFIG_DIR=~/.config/gh-dyungfirm gh'
+alias gh-odo='GH_CONFIG_DIR=~/.config/gh-oyedanolu gh'
 PS1='[\u@\h \W]\$ '
 
 export NVM_DIR="$HOME/.nvm"

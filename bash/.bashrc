@@ -72,3 +72,7 @@ unset GITHUB_TOKEN
 . "$HOME/.local/bin/env"
 
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"
+
+
+# Added by Antigravity CLI installer
+export PATH="/home/dyung/.local/bin:$PATH"

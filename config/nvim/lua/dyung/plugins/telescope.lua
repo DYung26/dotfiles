@@ -40,5 +40,3 @@ vim.keymap.set('n', '<leader>gd', require('telescope.builtin').lsp_definitions, 
 end, {})
 ]]
 -- https://chatgpt.com/s/t_689db88d088c8191804959c539f023bc
-
-vim.keymap.set("n", "<leader>ff", "<cmd>telescope find_files<cr>", { desc = "find files" }) -- <leader>ff to open telescope find_files

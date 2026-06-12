@@ -90,7 +90,6 @@ vim.keymap.set("v", ">", ">gv", { desc = "indent and keep visual selection" })
 vim.keymap.set("v", "<", "<gv", { desc = "outdent and keep visual selection" })
 
 vim.keymap.set('n', '<leader>gb', '<cmd>Gitsigns toggle_current_line_blame<CR>', { desc = "Toggle git blame" })
-vim.keymap.set('n', '<leader>nf', ':NvimTreeFindFile<CR>', { desc = 'NvimTree Find File' })
 
 vim.keymap.set("n", "<leader>wl", function()
   if vim.wo.winfixwidth then
@@ -105,9 +104,6 @@ vim.keymap.set("n", "<leader>wl", function()
 end, { desc = "toggle split lock" })
 
 -- vim.keymap.set(mode, key_combination, command, options)
-vim.keymap.set('n', '<c-n>', ':NvimTreeToggle<cr>', { noremap = true, silent = true })      -- toggle file tree with <c-n> -- <leader>n
-vim.keymap.set('n', '<c-f>', ':NvimTreeFocus<cr>', { noremap = true, silent = true })       -- toggle file tree with <c-f>
-
 
 local codespace = require("dyung.utils.codespace")
 

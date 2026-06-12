@@ -121,6 +121,16 @@ require("lazy").setup({
   {
     "seblyng/roslyn.nvim",
   },
+
+  {
+  "nvim-pack/nvim-spectre",
+  dependencies = {
+    "nvim-lua/plenary.nvim",
+  },
+  config = function()
+    require("dyung.plugins.spectre")
+  end,
+}
 }, {
   install = {
     missing = true,

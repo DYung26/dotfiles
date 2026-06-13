@@ -18,6 +18,30 @@ alias gh-df='GH_CONFIG_DIR=~/.config/gh-dyungfirm gh'
 alias gh-odo='GH_CONFIG_DIR=~/.config/gh-oyedanolu gh'
 PS1='[\u@\h \W]\$ '
 
+rmconflicts() {
+    local count
+
+    count=$(find . -type f -name "*.sync-conflict-*" | wc -l)
+
+    if [ "$count" -eq 0 ]; then
+        echo "No sync-conflict files found."
+        return 0
+    fi
+
+    echo "Found $count sync-conflict file(s):"
+    find . -type f -name "*.sync-conflict-*"
+    echo
+
+    read -rp "Delete them? [y/N] " confirm
+
+    [[ "$confirm" =~ ^([yY]|yes|YES|Yes)$ ]] || {
+        echo "Aborted."
+        return 1
+    }
+
+    find . -type f -name "*.sync-conflict-*" -exec rm -v {} \;
+}
+
 export NVM_DIR="$HOME/.nvm"
 if [ -n "$CODESPACE_NAME" ]; then
     export NVM_DIR="$HOME/nvm"

@@ -36,5 +36,11 @@ require('nvim-tree').setup({
 ]]
 
 vim.keymap.set('n', '<leader>nf', ':NvimTreeFindFile<CR>', { desc = 'NvimTree Find File' })
-vim.keymap.set('n', '<c-n>', ':NvimTreeToggle<cr>', { noremap = true, silent = true })      -- toggle file tree with <c-n> -- <leader>n
-vim.keymap.set('n', '<c-f>', ':NvimTreeFocus<cr>', { noremap = true, silent = true })       -- toggle file tree with <c-f>
+vim.keymap.set('n', '<leader>na', function()
+  require('nvim-tree.api').tree.expand_all()
+end, { desc = 'NvimTree Expand All' })
+vim.keymap.set('n', '<leader>nc', function()
+  require('nvim-tree.api').tree.collapse_all()
+end, { desc = 'NvimTree Collapse All' })
+vim.keymap.set('n', '<c-n>', ':NvimTreeToggle<cr>', { noremap = true, silent = true })
+vim.keymap.set('n', '<c-f>', ':NvimTreeFocus<cr>', { noremap = true, silent = true })

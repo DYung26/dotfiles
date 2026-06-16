@@ -1,6 +1,5 @@
 require('Comment').setup({
-  mappings = {
-    basic = true,  -- enables `gcc` & `gc{motion}`
-    extra = true,  -- enables `gbc` & `gb{motion}` for block comments
-  },
+  pre_hook = require(
+    'ts_context_commentstring.integrations.comment_nvim'
+  ).create_pre_hook(),
 })

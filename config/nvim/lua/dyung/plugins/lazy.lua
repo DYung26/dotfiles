@@ -103,7 +103,6 @@ require("lazy").setup({
   {
     "MeanderingProgrammer/render-markdown.nvim",
     dependencies = {
-      "nvim-treesitter/nvim-treesitter",
       "nvim-tree/nvim-web-devicons",
     },
     config = function()
@@ -123,14 +122,27 @@ require("lazy").setup({
   },
 
   {
-  "nvim-pack/nvim-spectre",
-  dependencies = {
-    "nvim-lua/plenary.nvim",
+    "nvim-pack/nvim-spectre",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+    },
+    config = function()
+      require("dyung.plugins.spectre")
+    end,
   },
-  config = function()
-    require("dyung.plugins.spectre")
-  end,
-}
+
+  {
+    "JoosepAlviste/nvim-ts-context-commentstring",
+    lazy = true,
+  },
+
+  {
+    "nvim-treesitter/nvim-treesitter",
+    build = ":TSUpdate",
+    config = function()
+      require("dyung.plugins.treesitter")
+    end,
+  },
 }, {
   install = {
     missing = true,

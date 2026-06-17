@@ -133,11 +133,12 @@ require("lazy").setup({
 
   {
     "JoosepAlviste/nvim-ts-context-commentstring",
-    lazy = true,
+    lazy = false,
   },
 
   {
     "nvim-treesitter/nvim-treesitter",
+    lazy = false,
     build = ":TSUpdate",
     config = function()
       require("dyung.plugins.treesitter")

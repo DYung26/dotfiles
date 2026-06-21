@@ -182,3 +182,27 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 # pnpm end
+
+rmconflicts() {
+    local count
+
+    count=$(find . -type f -name "*.sync-conflict-*" | wc -l)
+
+    if [ "$count" -eq 0 ]; then
+        echo "No sync-conflict files found."
+        return 0
+    fi
+
+    echo "Found $count sync-conflict file(s):"
+    find . -type f -name "*.sync-conflict-*"
+    echo
+
+    read -rp "Delete them? [y/N] " confirm
+
+    [[ "$confirm" =~ ^([yY]|yes|YES|Yes)$ ]] || {
+        echo "Aborted."
+        return 1
+    }
+
+    find . -type f -name "*.sync-conflict-*" -exec rm -v {} \;
+}

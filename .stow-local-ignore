@@ -1,0 +1,27 @@
+# --- Stow's own defaults (re-included since this file replaces them) ---
+^RCS$
+^\.+,v$
+^CVS$
+^\.\#.+$
+^\.cvsignore$
+^\.svn$
+^_darcs$
+^\.hg$
+^\.git$
+^\.gitignore$
+^\.gitmodules$
+^\.gitattributes$
+~$
+^\.DS_Store$
+
+# --- Syncthing artifacts ---
+^\.stfolder$
+^\.stversions$
+sync-conflict
+
+# --- Repo-local content that isn't meant to be symlinked into $HOME ---
+^containers$
+^note\.md$
+^todo\.md$
+^README.*$
+^LICENSE.*$

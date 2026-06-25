@@ -40,7 +40,7 @@ rmconflicts() {
         return 1
     }
 
-    find . -type f -name "*.sync-conflict-*" -exec rm -v {} \;
+    find . -type f -name "*.sync-conflict-*" -exec rm -fv {} \;
 }
 
 export NVM_DIR="$HOME/.nvm"

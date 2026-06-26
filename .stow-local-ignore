@@ -25,3 +25,4 @@ sync-conflict
 ^todo\.md$
 ^README.*$
 ^LICENSE.*$
+^docs$

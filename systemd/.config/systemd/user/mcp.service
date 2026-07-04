@@ -1,0 +1,14 @@
+[Unit]
+Description=MCP Filesystem Remote Server
+After=network-online.target
+
+[Service]
+Type=simple
+Environment=PATH=/home/dyung/.nvm/versions/node/v22.21.0/bin:/usr/bin:/bin
+ExecStart=%h/bin/start-mcp.sh
+WorkingDirectory=/home/dyung/Projects/mcp-servers/src/filesystem-remote
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

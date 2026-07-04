@@ -1,0 +1,12 @@
+[Unit]
+Description=Cloudflare Tunnel for MCP
+After=network-online.target mcp.service
+Requires=mcp.service
+
+[Service]
+ExecStart=/usr/bin/cloudflared tunnel run mcp
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -49,6 +49,7 @@ return {
     typescript = {
       format = { enable = true },
       suggest = { completefunctioncalls = true },
+      tsserver = { useSyntaxServer = "never" },
     },
     javascript = {
       format = { enable = true },

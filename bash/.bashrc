@@ -167,8 +167,34 @@ GIT_PS1_SHOWUNTRACKEDFILES=1
 GIT_PS1_SHOWUPSTREAM="auto"
 
 # export PS1='\[\e[0;36m\][\u@\h]:\w\$ \[\e[0m\]'
-export PS1='\[\e[0;36m\][\u@\h \W$(__git_ps1 " (%s)")]\$ \[\e[0m\]'
+# export PS1='\[\e[0;36m\][\u@\h \W$(__git_ps1 " (%s)")]\[\e[0m\]\n\$ '
 # export PS1=[\u@\h \W]\$
+
+# Build PS1 dynamically each prompt: keep '$' on the same line unless the
+# info line (user@host + dir + git status) reaches 3/4 of the current
+# pane's width, in which case '$' moves to its own line instead of
+# wrapping mid-line. tput cols reads the live pty, so this is correct
+# per-pane in tmux even when panes are resized.
+__ps1_update() {
+    local git_status
+    git_status=$(__git_ps1 " (%s)" 2>/dev/null)
+
+    local plain_cwd="${PWD##*/}"
+    [ -z "$plain_cwd" ] && plain_cwd="/"
+
+    local info="[${USER}@${HOSTNAME%%.*} ${plain_cwd}${git_status}]"
+    local cols
+    cols=$(tput cols 2>/dev/null || echo "${COLUMNS:-80}")
+    local threshold=$(( cols * 3 / 4 ))
+
+    if [ "${#info}" -ge "$threshold" ]; then
+        PS1='\[\e[0;36m\][\u@\h \W'"$git_status"']\[\e[0m\]\n\$ '
+    else
+        PS1='\[\e[0;36m\][\u@\h \W'"$git_status"']\[\e[0m\]\$ '
+    fi
+}
+PROMPT_COMMAND="__ps1_update${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+export PS1
 
 # pnpm
 export PNPM_HOME="/home/dyung/.local/share/pnpm"

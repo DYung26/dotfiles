@@ -71,6 +71,9 @@ require("lazy").setup({
 
   {
     "sindrets/diffview.nvim",
+    config = function()
+      require("dyung.plugins.diffview")
+    end,
     dependencies = {
       "nvim-lua/plenary.nvim",
     },

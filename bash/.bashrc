@@ -183,10 +183,12 @@ __ps1_wrap_newline() {
     local threshold=$(( cols * 1 / 2 ))
 
     if [ "${#info}" -ge "$threshold" ]; then
-        printf '\n'
+        __PS1_NL=$'\n'
+    else
+        __PS1_NL=""
     fi
 }
-PROMPT_COMMAND="__PS1_NL=\$(__ps1_wrap_newline)${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+PROMPT_COMMAND="__ps1_wrap_newline${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
 
 PS1='\[\e[0;36m\][\u@\h \W$(__git_ps1 " (%s)")]\[\e[0m\]$__PS1_NL\$ '
 export PS1

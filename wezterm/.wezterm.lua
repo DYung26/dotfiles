@@ -1,9 +1,13 @@
 local wezterm = require 'wezterm'
+local act = wezterm.action
 local config = {}
 
 wezterm.on("format-tab-title", function(tab)
-  local title = tab.active_pane.title
-  return " 🧠 " .. title .. " "
+  local title = tab.tab_title
+  if title and #title > 0 then
+    return " 🧠 " .. title .. " "
+  end
+  return " 🧠 " .. tab.active_pane.title .. " "
 end)
 
 -- shared config
@@ -37,6 +41,63 @@ config.window_decorations = "RESIZE"
 config.disable_default_key_bindings = false
 config.use_ime = false
 config.enable_kitty_keyboard = true
+
+config.keys = {
+  {
+    key = ",",
+    mods = "CTRL|SHIFT",
+    action = act.PromptInputLine {
+      description = "Rename tab:",
+      action = wezterm.action_callback(function(window, _, line)
+        if line then
+          window:active_tab():set_title(line)
+        end
+      end),
+    },
+  },
+  {
+    key = ".",
+    mods = "CTRL|SHIFT",
+    action = act.PromptInputLine {
+      description = "Rename window:",
+      action = wezterm.action_callback(function(window, _, line)
+        if line then
+          window:set_right_status(line)
+          window:set_title(line)
+        end
+      end),
+    },
+  },
+  {
+    key = "w",
+    mods = "CTRL|SHIFT",
+    action = act.PromptInputLine {
+      description = "Rename workspace:",
+      action = wezterm.action_callback(function(window, _, line)
+        if line then
+          wezterm.mux.rename_workspace(window:active_workspace(), line)
+        end
+      end),
+    },
+  },
+  {
+    key = "s",
+    mods = "CTRL|SHIFT",
+    action = act.PromptInputLine {
+      description = "New/switch workspace:",
+      action = wezterm.action_callback(function(window, pane, line)
+        if line then
+          window:perform_action(act.SwitchToWorkspace { name = line }, pane)
+        end
+      end),
+    },
+  },
+  {
+    key = "9",
+    mods = "CTRL|SHIFT",
+    action = act.ShowLauncherArgs { flags = "FUZZY|WORKSPACES" },
+  },
+}
 
 -- platform-specific overrides
 if wezterm.target_triple:find("windows") then

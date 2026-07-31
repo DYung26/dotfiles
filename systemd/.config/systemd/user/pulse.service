@@ -1,0 +1,14 @@
+[Unit]
+Description=Pulse note-tracking daemon
+# Only meaningful in a graphical session (the GNOME extension needs
+# XDG_RUNTIME_DIR, the same one the daemon binds its socket under).
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/Projects/pulse/core/target/release/pulse-daemon
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

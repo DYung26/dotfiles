@@ -23,7 +23,7 @@ lspconfig.pyright.setup(
   )
 )
 
-lspconfig.ts_ls.setup(
+lspconfig.vtsls.setup(
   with_capabilities(
     vim.tbl_extend(
       "force",
@@ -35,7 +35,7 @@ lspconfig.ts_ls.setup(
           ".git"
         ),
       },
-      require("dyung.lsp.ts_ls")
+      require("dyung.lsp.vtsls")
     )
   )
 )

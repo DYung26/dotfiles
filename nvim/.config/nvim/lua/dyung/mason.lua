@@ -34,6 +34,6 @@ require("mason-lspconfig").setup_handlers {
 }
 ]]
 require("mason-lspconfig").setup({
-  ensure_installed = { "lua_ls", "pyright" }, -- auto-install
+  ensure_installed = { "lua_ls", "pyright", "vtsls" }, -- auto-install
   automatic_installation = true,
 })

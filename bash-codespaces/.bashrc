@@ -310,3 +310,27 @@ restoreconflicts() {
 
     rm -rf "$backup_dir"
 }
+
+rmtmp() {
+    local count
+
+    count=$(find . -type f -name ".syncthing.*.tmp" | wc -l)
+
+    if [ "$count" -eq 0 ]; then
+        echo "No syncthing tmp files found."
+        return 0
+    fi
+
+    echo "Found $count syncthing tmp file(s):"
+    find . -type f -name ".syncthing.*.tmp"
+    echo
+
+    read -rp "Delete them? [y/N] " confirm
+
+    [[ "$confirm" =~ ^([yY]|yes|YES|Yes)$ ]] || {
+        echo "Aborted."
+        return 1
+    }
+
+    find . -type f -name ".syncthing.*.tmp" -exec rm -fv {} \;
+}

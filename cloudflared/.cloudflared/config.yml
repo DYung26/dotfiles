@@ -1,0 +1,17 @@
+tunnel: mcp
+credentials-file: /home/dyung/.cloudflared/62efc7a0-90ec-4026-b337-392624c2fa93.json
+
+ingress:
+  # - hostname: mcp.dyung.me
+  #   path: /.well-known/oauth-.*
+  #   service: http_status:404
+  #
+  # - hostname: mcp.dyung.me
+  #   path: /oauth/.*
+  #   service: http_status:404
+
+  - hostname: mcp.dyung.me
+    service: http://localhost:12008
+    # service: http://localhost:3333
+
+  - service: http_status:404

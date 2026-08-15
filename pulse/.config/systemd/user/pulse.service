@@ -6,6 +6,11 @@ PartOf=graphical-session.target
 
 [Service]
 Type=simple
+# Also read from ~/.config/environment.d/pulse.conf for non-systemd
+# consumers (GNOME Shell); duplicated here since systemd --user does
+# not reliably re-source environment.d before unit start ordering in
+# all cases, and this unit should be correct standalone regardless.
+Environment=PULSE_SOCKET_PATH=/tmp/pulse/pulse.sock
 ExecStart=%h/Projects/pulse/core/target/release/pulse-daemon
 Restart=on-failure
 RestartSec=2

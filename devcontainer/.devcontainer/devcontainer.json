@@ -1,4 +1,9 @@
 {
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  "postCreateCommand": "bash /workspaces/dotfiles/devcontainer/.devcontainer/post-create.sh",
   "postStartCommand": "bash /workspaces/dotfiles/devcontainer/.devcontainer/post-start.sh",
   "postAttachCommand": "pgrep -x syncthing > /dev/null || (syncthing --no-browser > /dev/null 2>&1 &)"
 }

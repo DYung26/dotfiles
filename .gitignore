@@ -43,6 +43,10 @@ gnupg/
 !.env.example
 !.env.*.example
 
+# Per-machine MCP env, stow-symlinked to ~/.config/mcp/env — not .env-named
+# so the pattern above doesn't already catch it
+mcp/.config/mcp/env
+
 # Credential stores & token files
 .aws/
 aws/

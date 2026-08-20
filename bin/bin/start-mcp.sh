@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-cd /home/dyung/Projects/mcp-servers/src/filesystem-remote
+set -euo pipefail
 
-exec env PORT=3333 \
-    /home/dyung/.nvm/versions/node/v22.21.0/bin/node dist/index.js streamableHttp /home/dyung
+: "${MCP_HOME:?MCP_HOME must be set (e.g. /home/dyung or /workspaces)}"
+: "${MCP_SERVERS_DIR:?MCP_SERVERS_DIR must be set (e.g. ${MCP_HOME}/Projects/mcp-servers/src/filesystem-remote on archlinux, ${MCP_HOME}/mcp-servers/src/filesystem-remote on codespaces)}"
+: "${MCP_PORT:=3333}"
+: "${NODE_BIN:=node}"
+
+cd "${MCP_SERVERS_DIR}"
+exec env PORT="${MCP_PORT}" "${NODE_BIN}" dist/index.js streamableHttp "${MCP_HOME}"

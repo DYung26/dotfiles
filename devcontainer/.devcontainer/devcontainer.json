@@ -1,0 +1,4 @@
+{
+  "postStartCommand": "bash /workspaces/dotfiles/devcontainer/.devcontainer/post-start.sh",
+  "postAttachCommand": "pgrep -x syncthing > /dev/null || (syncthing --no-browser > /dev/null 2>&1 &)"
+}

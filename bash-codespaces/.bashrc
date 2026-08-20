@@ -166,11 +166,6 @@ run_cpp_script() {
     g++ -x c++ -o /tmp/temp.out "$1" -lcurl -ljsoncpp && /tmp/temp.out && rm /tmp/temp.out
 }
 
-if ! pgrep -x "syncthing" > /dev/null; then
-  syncthing --no-browser > /dev/null 2>&1 &
-  echo "Syncthing started in background."
-fi
-
 export GPG_TTY=$(tty)
 
 unset GITHUB_TOKEN

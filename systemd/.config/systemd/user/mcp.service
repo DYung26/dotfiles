@@ -4,9 +4,9 @@ After=network-online.target
 
 [Service]
 Type=simple
-Environment=PATH=/home/dyung/.nvm/versions/node/v22.21.0/bin:/usr/bin:/bin
+EnvironmentFile=%h/.config/mcp/env
 ExecStart=%h/bin/start-mcp.sh
-WorkingDirectory=/home/dyung/Projects/mcp-servers/src/filesystem-remote
+WorkingDirectory=%h
 Restart=always
 RestartSec=5
 

@@ -37,8 +37,35 @@ dotfiles/devcontainer/.devcontainer/devcontainer.json
 /workspaces/codespaces/.devcontainer/devcontainer.json
 ```
 
+## Base image
+
+Uses `mcr.microsoft.com/devcontainers/javascript-node:20-bookworm`, not the
+default `universal` image GitHub Codespaces falls back to when no `image`
+is set. `universal` bundles full toolchains for every language (Rust,
+.NET, Ruby, PHP, LLVM/clang, etc.) whether you use them or not — on a 32GB
+codespace volume this left ~260MB free before any real work even started,
+and every container rebuild wiped any manual cleanup back to full.
+`javascript-node` ships just Node/npm/git; `docker-outside-of-docker` is
+added as a Feature for MetaMCP's `docker compose` needs, rather than baked
+into a universal image. Pinned to `-bookworm` specifically, not the bare
+`:20` tag — the bare tag currently resolves to Debian trixie, and
+`docker-outside-of-docker` doesn't support trixie yet (fails with "moby-cli
+and related system packages are not available in that distribution"),
+which silently drops you into GitHub's Alpine recovery container instead
+of a real build failure being obvious.
+
+The tradeoff: `universal`'s bundled tmux/zsh/neovim are gone, and Syncthing
+(needed on any image — it's never in Ubuntu's default apt repos, universal
+or minimal) needs its repo added explicitly. These get installed once via
+`postCreateCommand` (`post-create.sh`) — neovim as a prebuilt binary
+release (GitHub's `latest` URL alias, so it never goes stale), not
+compiled from source, to avoid pulling gcc/cmake back in and undoing the
+whole point of switching images.
+
 ## What this devcontainer.json actually does
 
+- `postCreateCommand` (runs once, at container creation): installs
+  tmux, zsh, neovim, syncthing — see "Base image" above.
 - `postStartCommand` (runs on every start/resume): runs
   `.devcontainer/post-start.sh`, which calls the existing
   `start-mcp.sh` / `start-cloudflared.sh` directly (same scripts
@@ -69,9 +96,13 @@ restart, so logs don't accumulate across sessions.
 
 - No automatic respawn if a backgrounded process dies mid-session —
   `postStartCommand` only runs on start/resume, not continuously. Re-run
-  the relevant `start-*-background.sh` manually if something goes down. A
-  proper supervisor is a follow-up, not blocking the gh-06 pilot.
-- Not yet tested end-to-end (fresh codespace creation, not just the pieces
-  individually) — gh-06 already has everything set up manually from
-  earlier work, so this devcontainer.json is for the *next* fresh
-  codespace or a gh-06 rebuild, whichever comes first.
+  the relevant script from `bin/bin/` manually (backgrounded with `&`) if
+  something goes down. A proper supervisor is a follow-up, not blocking
+  the gh-06 pilot.
+- Switching the base image means MetaMCP's Postgres container needs actual
+  free disk to `initdb` on first run — a fresh minimal image plus a fresh
+  postgres volume both competing for space on a nearly-full codespace can
+  still fail. Run the disk cleanup (`~/scripts/cleanup-codespace-disk.sh`)
+  before the first `docker compose up -d` on a new codespace, not after.
+- Being tested end-to-end on gh-06 via a real image-switch rebuild; not
+  yet confirmed clean on a genuinely fresh codespace creation.

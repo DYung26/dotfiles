@@ -8,7 +8,8 @@ set -euo pipefail
 # defeat the whole point of moving off the universal image).
 
 sudo apt-get update
-sudo apt-get install -y --no-install-recommends tmux zsh curl ca-certificates gnupg stow
+sudo apt-get install -y --no-install-recommends stow git-lfs tmux zsh curl ca-certificates gnupg
+git lfs install
 
 # Syncthing: not in Ubuntu's default apt repos on any image (universal or
 # minimal) — needs the official apt.syncthing.net repo + GPG key added

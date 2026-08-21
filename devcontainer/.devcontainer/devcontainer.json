@@ -8,5 +8,5 @@
   },
   "postCreateCommand": "bash /workspaces/codespaces/.devcontainer/post-create.sh",
   "postStartCommand": "bash /workspaces/codespaces/.devcontainer/post-start.sh",
-  "postAttachCommand": "pgrep -x syncthing > /dev/null || (syncthing --no-browser > /dev/null 2>&1 &)"
+  "postAttachCommand": "mkdir -p /tmp/mcp; pgrep -x syncthing > /dev/null || (syncthing --no-browser > /tmp/mcp/syncthing.log 2>&1 &)"
 }

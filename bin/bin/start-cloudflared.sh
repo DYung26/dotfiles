@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ -n "${CLOUDFLARED_TUNNEL_TOKEN:-}" ]; then
+  exec cloudflared tunnel run --token "${CLOUDFLARED_TUNNEL_TOKEN}"
+fi
+
 : "${CLOUDFLARED_CREDENTIALS_FILE:?CLOUDFLARED_CREDENTIALS_FILE must be set}"
 
 CONFIG_TEMPLATE="${HOME}/.cloudflared/config.yml"

@@ -1,8 +1,8 @@
-tunnel: mcp
+tunnel: ${CLOUDFLARED_TUNNEL_NAME}
 credentials-file: ${CLOUDFLARED_CREDENTIALS_FILE}
 
 ingress:
-  - hostname: mcp.dyung.me
+  - hostname: ${CLOUDFLARED_HOSTNAME}
     service: http://localhost:12008
 
   - service: http_status:404

@@ -47,6 +47,10 @@ gnupg/
 # so the pattern above doesn't already catch it
 mcp/.config/mcp/env
 
+# Cloudflare tunnel credentials JSON, stow-symlinked to ~/.cloudflared/ — the
+# tunnel's own secret, not covered by *.pem (that's only cert.pem)
+cloudflared/.cloudflared/*.json
+
 # Credential stores & token files
 .aws/
 aws/

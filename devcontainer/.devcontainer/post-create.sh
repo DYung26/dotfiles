@@ -9,7 +9,7 @@ set -euo pipefail
 
 sudo apt-get update
 sudo apt-get install -y --no-install-recommends stow git-lfs tmux zsh curl ca-certificates gnupg
-git lfs install
+git lfs install --force
 
 # Syncthing: not in Ubuntu's default apt repos on any image (universal or
 # minimal) — needs the official apt.syncthing.net repo + GPG key added

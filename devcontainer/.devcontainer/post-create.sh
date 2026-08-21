@@ -8,7 +8,7 @@ set -euo pipefail
 # defeat the whole point of moving off the universal image).
 
 sudo apt-get update
-sudo apt-get install -y --no-install-recommends tmux zsh curl ca-certificates gnupg
+sudo apt-get install -y --no-install-recommends tmux zsh curl ca-certificates gnupg stow
 
 # Syncthing: not in Ubuntu's default apt repos on any image (universal or
 # minimal) — needs the official apt.syncthing.net repo + GPG key added
@@ -31,3 +31,17 @@ sudo ln -sf /usr/local/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
 rm -f "/tmp/${NVIM_TARBALL}"
 
 echo "tmux, zsh, neovim, syncthing installed."
+
+# Stow the mcp env file: ~/.config/mcp/env lives on the container's own
+# filesystem (wiped every rebuild), but its real source content lives in
+# dotfiles/mcp/.config/mcp/env on /workspaces (persistent, and gitignored +
+# .stignore'd at this path so this codespace's own values never get
+# clobbered by another machine's copy via Syncthing). Re-stow on every
+# fresh container so the symlink exists again after a rebuild.
+if [ -f /workspaces/dotfiles/mcp/.config/mcp/env ]; then
+  mkdir -p "${HOME}/.config"
+  (cd /workspaces/dotfiles && stow -t "${HOME}" mcp)
+else
+  echo "post-create.sh: /workspaces/dotfiles/mcp/.config/mcp/env not found —" >&2
+  echo "  create it with this codespace's own values before relying on the mcp/cloudflared startup." >&2
+fi

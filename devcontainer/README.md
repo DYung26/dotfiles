@@ -1,41 +1,53 @@
-# devcontainer stow package — different target than everything else
+# devcontainer files — committed directly to codespaces, not symlinked
 
-Every other stow package in this repo targets `$HOME` (the default). This
-one is the exception: it needs to land in the `codespaces` repo, not
-`$HOME`, because that's where GitHub Codespaces actually looks for
-`devcontainer.json` (repo root's `.devcontainer/devcontainer.json`).
-Confirmed: none of the `gh-*` codespaces have ever had a devcontainer.json,
-so this is new, not a merge.
+`devcontainer.json`, `post-create.sh`, and `post-start.sh` live here in
+`dotfiles` as the source of truth you edit, but they must be **copied and
+committed directly into the `codespaces` repo's own `.devcontainer/`**, not
+stow-symlinked there. Two reasons this can't be a symlink, found the hard
+way:
 
-## The command (remember this one — it's different)
+1. Git refuses to track a path through a symlinked directory (`git add
+   .devcontainer/devcontainer.json` errors with "beyond a symbolic link")
+   when `.devcontainer` itself is a symlink into another repo — there'd be
+   nothing for `codespaces` to actually commit.
+2. GitHub Codespaces reads `.devcontainer/devcontainer.json` from the
+   repo's committed content to decide how to build the container in the
+   first place — `dotfiles` isn't guaranteed to be cloned yet at that
+   point, so even a working symlink wouldn't reliably resolve on a fresh
+   codespace creation.
 
-Run from inside a codespace, once `codespaces` is cloned to
-`/workspaces/codespaces`:
+**Critical: `postCreateCommand`/`postStartCommand` in `devcontainer.json`
+must reference `/workspaces/codespaces/.devcontainer/...`, not
+`/workspaces/dotfiles/devcontainer/.devcontainer/...`.** Got this backwards
+for several iterations — `codespaces` is what gets `git pull`ed and is
+guaranteed current; `/workspaces/dotfiles` only updates via Syncthing,
+which isn't the same event as pushing a fix to `codespaces`. Every fix
+pushed to `codespaces` silently kept executing the old, stale version
+sitting in `dotfiles` until this was caught.
+
+## Workflow for changing any of these three files
 
 ```bash
-cd ~/Projects/dotfiles
-stow -t /workspaces/codespaces devcontainer
+# 1. Edit the source of truth in dotfiles
+# 2. Copy into your local clone of the codespaces repo
+cp devcontainer/.devcontainer/devcontainer.json /path/to/codespaces-clone/.devcontainer/
+cp devcontainer/.devcontainer/post-create.sh /path/to/codespaces-clone/.devcontainer/
+cp devcontainer/.devcontainer/post-start.sh /path/to/codespaces-clone/.devcontainer/
+chmod +x /path/to/codespaces-clone/.devcontainer/post-create.sh /path/to/codespaces-clone/.devcontainer/post-start.sh
+# 3. Commit and push from the codespaces clone
+cd /path/to/codespaces-clone
+git add .devcontainer
+git commit -m "..."
+git push
+# 4. On the actual codespace: git pull, then rebuild
 ```
 
-Every other invocation you run is just `stow <package>` (implicitly
-targeting `$HOME`). This one needs the explicit `-t` flag, or it will try
-to symlink `.devcontainer/devcontainer.json` into `$HOME` instead, which is
-wrong.
-
-## Why the package structure looks like this
-
-Stow mirrors the package's internal directory structure onto the target
-root. Since the target root here is `/workspaces/codespaces`, not `$HOME`,
-the package contains a full `.devcontainer/devcontainer.json` path inside
-it — same principle as `systemd/.config/systemd/user/mcp.service` mirroring
-onto `~/.config/systemd/user/mcp.service` for the normal `$HOME` target,
-just with a different root.
-
-```
-dotfiles/devcontainer/.devcontainer/devcontainer.json
-  → symlinked to →
-/workspaces/codespaces/.devcontainer/devcontainer.json
-```
+The `bin/bin/*.sh` scripts (`start-mcp.sh`, `start-cloudflared.sh`,
+`start-metamcp.sh`) that `post-start.sh` calls are NOT part of this — those
+genuinely belong in `dotfiles` and stay Syncthing'd, since they're shared
+across archlinux and every codespace. Only the top-level orchestration
+(`devcontainer.json`, `post-create.sh`, `post-start.sh` themselves) needs
+to be duplicated into `codespaces`.
 
 ## Base image
 

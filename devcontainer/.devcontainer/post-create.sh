@@ -8,7 +8,7 @@ set -euo pipefail
 # defeat the whole point of moving off the universal image).
 
 sudo apt-get update
-sudo apt-get install -y --no-install-recommends stow git-lfs tmux zsh curl ca-certificates gnupg
+sudo apt-get install -y --no-install-recommends stow git-lfs zsh curl ca-certificates gnupg ripgrep
 git lfs install --force
 
 # Syncthing: not in Ubuntu's default apt repos on any image (universal or
@@ -37,6 +37,20 @@ sudo rm -rf /usr/local/nvim-linux-x86_64
 sudo tar -C /usr/local -xzf "/tmp/${NVIM_TARBALL}"
 sudo ln -sf /usr/local/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
 rm -f "/tmp/${NVIM_TARBALL}"
+
+# tmux: prebuilt static release tarball from tmux/tmux-builds, not apt —
+# Debian bookworm ships 3.3a, too old for several popup-related features
+# this config relies on. Unlike Neovim, tmux-builds doesn't publish assets
+# under a stable filename, so the asset URL is resolved via the GitHub API
+# rather than guessed.
+TMUX_ASSET_URL=$(curl -fsSL https://api.github.com/repos/tmux/tmux-builds/releases/latest | grep -o "browser_download_url[^,]*linux-x86_64[^,]*tar.gz\"" | head -n1 | grep -o "https://[^\"]*")
+TMUX_TARBALL="$(basename "${TMUX_ASSET_URL}")"
+TMUX_EXTRACT_DIR="$(mktemp -d /tmp/tmux-build.XXXXXX)"
+curl -fsSLo "/tmp/${TMUX_TARBALL}" "${TMUX_ASSET_URL}"
+tar -C "${TMUX_EXTRACT_DIR}" -xzf "/tmp/${TMUX_TARBALL}"
+sudo install -m 0755 "${TMUX_EXTRACT_DIR}/tmux" /usr/local/bin/tmux
+rm -f "/tmp/${TMUX_TARBALL}"
+rm -rf "${TMUX_EXTRACT_DIR}"
 
 echo "tmux, zsh, neovim, syncthing installed."
 

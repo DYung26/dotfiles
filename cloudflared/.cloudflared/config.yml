@@ -3,6 +3,8 @@ credentials-file: ${CLOUDFLARED_CREDENTIALS_FILE}
 
 ingress:
   - hostname: ${CLOUDFLARED_HOSTNAME}
-    service: http://localhost:12008
+    service: ${CLOUDFLARED_SERVICE}
+    originRequest:
+      noTLSVerify: true
 
   - service: http_status:404

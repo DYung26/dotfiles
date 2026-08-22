@@ -52,7 +52,15 @@ sudo install -m 0755 "${TMUX_EXTRACT_DIR}/tmux" /usr/local/bin/tmux
 rm -f "/tmp/${TMUX_TARBALL}"
 rm -rf "${TMUX_EXTRACT_DIR}"
 
-echo "tmux, zsh, neovim, syncthing installed."
+# Rust toolchain (rustup, cargo, rustc): nvim-treesitter's newer "main"
+# branch calls out to the tree-sitter CLI to build parsers, and installing
+# tree-sitter-cli via cargo (rather than npm, whose prebuilt binaries are
+# linked against a newer glibc than some base images provide) compiles it
+# locally against whatever glibc is actually on this image.
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+source "${HOME}/.cargo/env"
+
+echo "tmux, zsh, neovim, syncthing, rust installed."
 
 # Stow the mcp env file: ~/.config/mcp/env lives on the container's own
 # filesystem (wiped every rebuild), but its real source content lives in

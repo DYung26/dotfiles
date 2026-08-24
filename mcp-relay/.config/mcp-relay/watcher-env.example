@@ -1,0 +1,32 @@
+# Per-machine env for the mcp-relay watcher (ubuntu only).
+# Copy to ~/.config/mcp-relay/watcher-env (stow will symlink it there) and
+# fill in real values — that file is gitignored/stignored, this template is
+# not.
+
+# CLOUDFLARED_ENV_FILE: the env file ubuntu's cloudflared-mcp.service
+# sources CLOUDFLARED_SERVICE (and friends) from. This is NOT the
+# filesystem-MCP env — ubuntu doesn't run that server. If ubuntu already has
+# ~/.config/mcp/env set up (e.g. shared with a local cloudflared tunnel
+# unrelated to the filesystem server), point at that; otherwise create a
+# dedicated file with at minimum CLOUDFLARED_SERVICE=, CLOUDFLARED_HOSTNAME=,
+# CLOUDFLARED_TUNNEL_NAME=, CLOUDFLARED_CREDENTIALS_FILE= set correctly for
+# ubuntu's own tunnel.
+CLOUDFLARED_ENV_FILE=/home/ubuntu/.config/mcp/env
+WATCHER_STATE_DIR=/home/ubuntu/.local/state/mcp-relay
+
+# The dedicated, forced-command-restricted SSH identity — NOT the shared key
+# already used elsewhere between ubuntu and archlinux. Generate a new
+# ed25519 keypair for this specifically; the corresponding public key goes
+# into archlinux's ~/.ssh/authorized_keys with a command= restriction (see
+# chat notes — not written to a doc on purpose).
+ARCHLINUX_SSH_HOST=archlinux
+ARCHLINUX_SSH_USER=dyung
+ARCHLINUX_SSH_KEY=/home/ubuntu/.ssh/mcp-relay-watcher
+
+# Fill these in once the Tailscale (or equivalent) private network between
+# ubuntu and archlinux is decided — see checklist.md, still open.
+LOCAL_SERVICE_URL=http://localhost:12008
+REMOTE_SERVICE_URL=http://REPLACE_ME_TAILSCALE_IP:12008
+
+FAILURE_THRESHOLD=3
+CLOUDFLARED_UNIT=cloudflared-mcp.service

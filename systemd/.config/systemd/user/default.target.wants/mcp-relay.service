@@ -1,0 +1,14 @@
+[Unit]
+Description=MCP Relay Registry Server
+After=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/mcp-relay/env
+ExecStart=%h/bin/start-mcp-relay.sh
+WorkingDirectory=%h
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

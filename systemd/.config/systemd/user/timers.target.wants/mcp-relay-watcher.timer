@@ -1,0 +1,10 @@
+[Unit]
+Description=Run mcp-relay watcher on an interval
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+Unit=mcp-relay-watcher.service
+
+[Install]
+WantedBy=timers.target

@@ -257,3 +257,6 @@ rmtmp() {
 
     find . -type f -name ".syncthing.*.tmp" -exec rm -fv {} \;
 }
+
+# opencode
+export PATH=/home/dyung/.opencode/bin:$PATH

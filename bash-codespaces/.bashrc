@@ -162,6 +162,12 @@ fi
 
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
+# Redundant safety net: post-create.sh already sets this system-wide in
+# /etc/bash.bashrc, but export it here too in case this file ever takes
+# precedence (e.g. stowed directly to ~/.bashrc) without post-create.sh
+# having run first.
+export LANG=C.UTF-8
+
 run_cpp_script() {
     g++ -x c++ -o /tmp/temp.out "$1" -lcurl -ljsoncpp && /tmp/temp.out && rm /tmp/temp.out
 }

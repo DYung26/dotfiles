@@ -41,3 +41,14 @@ if ! pgrep -f "cloudflared tunnel" > /dev/null; then
 fi
 
 bash /workspaces/dotfiles/bin/bin/start-metamcp.sh
+
+# Syncthing: duplicated here (not moved) from postAttachCommand in
+# devcontainer.json, which only fires in VS Code clients — it's a
+# client-side hook, not something the remote container runs, so it never
+# fires for non-VS Code clients (e.g. gh cs ssh) and never appears in
+# creation.log even when it does run. postStartCommand always runs
+# remotely regardless of client, so this guarantees syncthing comes up
+# either way; the pgrep guard makes running it from both hooks a no-op
+# when it's already up.
+mkdir -p /tmp/mcp
+pgrep -x syncthing > /dev/null || (syncthing --no-browser > /tmp/mcp/syncthing.log 2>&1 &)

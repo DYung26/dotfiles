@@ -51,4 +51,6 @@ bash /workspaces/dotfiles/bin/bin/start-metamcp.sh
 # either way; the pgrep guard makes running it from both hooks a no-op
 # when it's already up.
 mkdir -p /tmp/mcp
-pgrep -x syncthing > /dev/null || (syncthing --no-browser > /tmp/mcp/syncthing.log 2>&1 &)
+if ! pgrep -x syncthing > /dev/null; then
+  setsid nohup syncthing --no-browser > /tmp/mcp/syncthing.log 2>&1 < /dev/null &
+fi

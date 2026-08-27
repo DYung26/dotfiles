@@ -7,6 +7,25 @@ set -euo pipefail
 # — avoids pulling in gcc/cmake/make just to get an editor, which would
 # defeat the whole point of moving off the universal image).
 
+# Locale: the base image has no LANG set, so every shell defaults to the
+# POSIX locale — no UTF-8 support at all. This is invisible outside tmux
+# (the outer client/SSH session usually forwards a real locale), but
+# tmux's server is spawned fresh with whatever bare environment this
+# script's own shell has, and every later client attaching inherits that.
+# Result: every multibyte glyph (prompt arrows, Nerd Font icons in
+# Neovim, box-drawing chars) renders as a literal "_", and cursor math
+# for wide/multibyte characters breaks, causing wrapping glitches.
+# C.UTF-8 is built into glibc — no locale-gen, no extra package, no
+# debconf prompt — so this just needs to be set and persisted.
+# /etc/environment alone isn't enough — Codespaces containers don't run
+# a full PAM login chain, so pam_env never parses it for these shells.
+# Setting LANG in /etc/bash.bashrc (sourced by every interactive bash
+# shell, tmux's server included, regardless of whether dotfiles are
+# stowed yet) is what actually takes effect.
+echo "LANG=C.UTF-8" | sudo tee -a /etc/environment
+echo "export LANG=C.UTF-8" | sudo tee -a /etc/bash.bashrc
+export LANG=C.UTF-8
+
 sudo apt-get update
 sudo apt-get install -y --no-install-recommends stow git-lfs zsh curl ca-certificates gnupg ripgrep
 git lfs install --force

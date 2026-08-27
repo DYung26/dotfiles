@@ -40,8 +40,6 @@ if ! pgrep -f "cloudflared tunnel" > /dev/null; then
   fi
 fi
 
-bash /workspaces/dotfiles/bin/bin/start-metamcp.sh
-
 # Syncthing: duplicated here (not moved) from postAttachCommand in
 # devcontainer.json, which only fires in VS Code clients — it's a
 # client-side hook, not something the remote container runs, so it never
@@ -54,3 +52,5 @@ mkdir -p /tmp/mcp
 if ! pgrep -x syncthing > /dev/null; then
   setsid nohup syncthing --no-browser > /tmp/mcp/syncthing.log 2>&1 < /dev/null &
 fi
+
+bash /workspaces/dotfiles/bin/bin/start-metamcp.sh

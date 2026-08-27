@@ -20,10 +20,13 @@ echo "deb [signed-by=/etc/apt/keyrings/syncthing-archive-keyring.gpg] https://ap
 sudo apt-get update
 sudo apt-get install -y syncthing
 
-# cloudflared: official apt repo, same pattern as syncthing above.
+# cloudflared: official apt repo, same pattern as syncthing above. Pinned
+# to bookworm rather than $(lsb_release -cs): Cloudflare's repo doesn't
+# publish a trixie component yet, and bookworm's cloudflared .deb installs
+# fine on trixie since it has no glibc/kernel-specific dependencies.
 sudo mkdir -p --mode=0755 /usr/share/keyrings
 curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
-echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
+echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared bookworm main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
 sudo apt-get update
 sudo apt-get install -y cloudflared
 

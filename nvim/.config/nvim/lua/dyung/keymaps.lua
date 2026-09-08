@@ -112,3 +112,36 @@ vim.keymap.set("n", "<leader>d", codespace.download_project)
 
 vim.keymap.set("n", "<leader>cu", codespace.upload_git_changes)
 vim.keymap.set("n", "<leader>cd", codespace.download_git_changes)
+local function mdsync_run(action)
+  local path = vim.fn.expand('%:p')
+  if path == '' or vim.bo.buftype ~= '' then
+    vim.notify('mdsync: current buffer is not a file', vim.log.levels.WARN)
+    return
+  end
+
+  if action ~= 'pull' then
+    vim.cmd('update')
+  end
+
+  local cmd = { 'mdsync', action, path }
+  vim.notify('mdsync: ' .. action .. ' ' .. path)
+
+  vim.system(cmd, { text = true }, function(result)
+    vim.schedule(function()
+      local output = vim.trim((result.stdout or '') .. (result.stderr or ''))
+      if result.code == 0 then
+        vim.notify(output ~= '' and output or ('mdsync: ' .. action .. ' completed'))
+        if action == 'pull' or action == 'sync' or action == 'resolve' then
+          vim.cmd('checktime')
+        end
+      else
+        vim.notify(output ~= '' and output or ('mdsync: ' .. action .. ' failed'), vim.log.levels.ERROR)
+      end
+    end)
+  end)
+end
+
+vim.keymap.set('n', '<leader>ms', function() mdsync_run('sync') end, { desc = 'mdsync: sync current file' })
+vim.keymap.set('n', '<leader>mp', function() mdsync_run('push') end, { desc = 'mdsync: push current file' })
+vim.keymap.set('n', '<leader>ml', function() mdsync_run('pull') end, { desc = 'mdsync: pull current file' })
+vim.keymap.set('n', '<leader>mr', function() mdsync_run('resolve') end, { desc = 'mdsync: resolve current file' })

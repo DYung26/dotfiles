@@ -1,0 +1,14 @@
+[Unit]
+Description=Playwright MCP Server
+After=network-online.target
+
+[Service]
+Type=simple
+Environment=PATH=%h/.nvm/versions/node/v22.21.0/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:%h/go/bin:%h/.cargo/bin
+ExecStart=/usr/bin/env npx @playwright/mcp@latest --browser=chromium --port=8931 --host=0.0.0.0 --allowed-hosts '*'
+WorkingDirectory=%h
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

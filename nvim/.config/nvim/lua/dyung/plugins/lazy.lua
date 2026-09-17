@@ -147,6 +147,14 @@ require("lazy").setup({
       require("dyung.plugins.treesitter")
     end,
   },
+
+  {
+    "akinsho/toggleterm.nvim",
+    version = "*",
+    config = function()
+      require("dyung.plugins.terminal")
+    end,
+  },
 }, {
   install = {
     missing = true,

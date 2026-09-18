@@ -1,0 +1,64 @@
+services:
+  mcp-proxy-shell:
+    image: ghcr.io/sparfenyuk/mcp-proxy:latest
+    container_name: mcp-proxy-shell
+    restart: unless-stopped
+    ports:
+      - "${MCP_PROXY_SHELL_PORT:-8090}:8090"
+    volumes:
+      # Let the proxy spawn `docker run` for mcp-shell on the HOST's Docker
+      # daemon (not Docker-in-Docker) - same pattern used for metamcp's app
+      # container.
+      #
+      # NOTE: this image is Alpine (musl libc). The host's /usr/bin/docker is
+      # a glibc binary and will not exec inside a musl container even though
+      # the bind mount "succeeds" - it fails at exec() with a FileNotFoundError
+      # that looks identical to a missing-mount error. Use Docker's static CLI
+      # release instead (https://download.docker.com/linux/static/stable/x86_64/),
+      # extracted to /home/dyung/.local/docker-static/docker/docker on the
+      # host. Kept under $HOME instead of /tmp since /tmp is wiped on reboot,
+      # which breaks this bind mount every time the host restarts.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/dyung/.local/docker-static/docker/docker:/usr/bin/docker:ro
+    command:
+      - "--port=8090"
+      - "--host=0.0.0.0"
+      - "--pass-environment"
+      - "--"
+      - "/usr/bin/docker"
+      - "run"
+      - "--rm"
+      - "-i"
+      - "--network"
+      - "mcp-shell-net"
+      - "-v"
+      - "/home/dyung:/home/dyung:rw"
+      - "-v"
+      - "/home/dyung/Projects/dotfiles/containers/mcp-proxy-shell/security.yaml:/etc/mcp-shell/security.yaml"
+      - "-e"
+      - "MCP_SHELL_SEC_CONFIG_FILE=/etc/mcp-shell/security.yaml"
+      - "-e"
+      - "HOME=/home/dyung"
+      - "sonirico/mcp-shell:latest"
+
+# Dedicated network for spawned mcp-shell containers - keeps them off the
+# default bridge and away from other services (metamcp, postgres, etc).
+# This does NOT restrict egress to the internet by itself (bash/git/npm/pip
+# still need to reach the network); it only isolates from sibling
+# containers. A real domain-level egress allowlist would need an egress
+# proxy in front of this network - worth revisiting if that's wanted later.
+networks:
+  default:
+    name: mcp-shell-net
+
+# cd ~/Projects/dotfiles/containers/mcp-proxy-shell/ && docker compose --env-file .env.mcp-proxy-shell -f mcp-proxy-shell.compose.yml up -d
+
+# exposes SSE at:   http://localhost:8090/sse
+# exposes HTTP at:  http://localhost:8090/mcp  (pass --transport=streamablehttp
+#                    on the CLIENT side, e.g. in MetaMCP's server config)
+# each incoming session spawns a fresh, correctly-scoped mcp-shell container
+# and removes it on disconnect - no more orphaned containers.
+
+# recreate from scratch
+# docker compose down -v
+# docker compose up -d

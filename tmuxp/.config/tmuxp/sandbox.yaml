@@ -1,0 +1,42 @@
+# ~/.config/tmuxp/sandbox.yaml
+# Load with: tmuxp load sandbox
+
+session_name: sandbox
+
+windows:
+  - window_name: window0
+    panes:
+      - shell_command:
+
+  - window_name: window1
+    panes:
+      - shell_command:
+
+  - window_name: window2
+    panes:
+      - shell_command:
+
+  - window_name: window3
+    panes:
+      - shell_command:
+
+  - window_name: window4
+    panes:
+      - shell_command:
+
+  - window_name: window5
+    panes:
+      - shell_command:
+
+  - window_name: window6
+    panes:
+      - shell_command:
+
+  - window_name: window7
+    panes:
+      - shell_command:
+      - shell_command:
+      - shell_command:
+          - source ~/Projects/maestro/.venv/bin/activate
+          - cmd: python capture.py --launch --url https://claude.ai/chat/573b7de2-b2bc-46b1-907e-cd8f61b1796e --switchboard-account dyung.firm --text --start-position --output-dir ./out
+            enter: false

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -u
+
+IFACE="$1"
+ACTION="$2"
+
+LOG_TAG="nm-wifi-reconnect"
+LOCK_DIR="/run/${LOG_TAG}.lock"
+
+# Only care about "down" events.
+# NetworkManager dispatcher passes interface name as $1 and action as $2.
+[ "$ACTION" = "down" ] || exit 0
+
+# Make sure this is a Wi-Fi device.
+DEV_TYPE="$(nmcli -t -f GENERAL.TYPE device show "$IFACE" 2>/dev/null | cut -d: -f2)"
+[ "$DEV_TYPE" = "wifi" ] || exit 0
+
+# Prevent multiple overlapping reconnect attempts.
+mkdir "$LOCK_DIR" 2>/dev/null || exit 0
+trap 'rmdir "$LOCK_DIR"' EXIT
+
+logger -t "$LOG_TAG" "Detected Wi-Fi down on $IFACE; scheduling reconnect"
+
+# Small delay so we don't fight NetworkManager mid-state-change.
+sleep 2
+
+# If already back up, do nothing.
+STATE="$(nmcli -t -f GENERAL.STATE device show "$IFACE" 2>/dev/null | cut -d: -f2)"
+case "$STATE" in
+  100*|connected*)
+    logger -t "$LOG_TAG" "$IFACE is already connected; nothing to do"
+    exit 0
+    ;;
+esac
+
+# Try the remembered connection for this device first.
+CONN_ID="$(nmcli -t -f GENERAL.CONNECTION device show "$IFACE" 2>/dev/null | cut -d: -f2-)"
+
+if [ -n "${CONN_ID:-}" ] && [ "$CONN_ID" != "--" ]; then
+  logger -t "$LOG_TAG" "Trying nmcli connection up '$CONN_ID' ifname '$IFACE'"
+  nmcli --wait 10 connection up id "$CONN_ID" ifname "$IFACE" \
+    && logger -t "$LOG_TAG" "Reconnect succeeded via connection '$CONN_ID'" \
+    && exit 0
+fi
+
+# Fallback: ask NM to connect the device using any suitable autoconnect profile.
+logger -t "$LOG_TAG" "Falling back to nmcli device connect '$IFACE'"
+nmcli --wait 10 device connect "$IFACE" \
+  && logger -t "$LOG_TAG" "Reconnect succeeded via device connect" \
+  || logger -t "$LOG_TAG" "Reconnect failed on $IFACE"
+
+exit 0

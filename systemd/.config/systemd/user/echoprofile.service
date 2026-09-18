@@ -1,0 +1,21 @@
+[Unit]
+Description=echoprofile clone server (persistent Edge profile + ephemeral clones)
+# Launches real, headed browser windows (the persistent profile, and every
+# clone), so - same as pulse.service - this only makes sense once a
+# graphical session actually exists to put those windows on.
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+# Hot reload defaults on in `echoprofile serve` for interactive dev use, but
+# it restarts the whole process on any file change - which orphans the
+# persistent profile window and any open clones (see server.py's run()).
+# Not appropriate for a long-running background service.
+Environment=ECHOPROFILE_NO_RELOAD=1
+ExecStart=%h/.local/bin/echoprofile serve
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

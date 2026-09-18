@@ -1,0 +1,23 @@
+[Unit]
+Description=Input Leap client (connects to the Input Leap server)
+# Needs the display/session up before it can grab input.
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+# --no-tray: no tray icon since this runs headless as a unit
+#
+# NOTE (Wayland/GNOME): the RemoteDesktop portal doesn't currently persist
+# authorization for input-leap (open upstream issue), so this WILL show the
+# permission popup on every start. ExecStartPre gives the portal/session a
+# few seconds to be fully ready so the popup actually has time to appear
+# and be clickable instead of the request failing silently before you can
+# respond to it.
+ExecStartPre=/usr/bin/sleep 5
+ExecStart=/usr/bin/input-leapc --no-tray --debug DEBUG --name %H LAPTOP-AB9612IK.local
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

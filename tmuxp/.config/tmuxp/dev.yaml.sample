@@ -1,0 +1,75 @@
+# ~/.config/tmuxp/dev.yaml
+# Sample tmuxp session showcasing most of its feature surface.
+# Load with:   tmuxp load dev
+# Or directly: tmuxp load ~/.config/tmuxp/dev.yaml
+#
+# Docs: https://tmuxp.git-pull.com/configuration/index.html
+
+session_name: dev
+
+# Runs once, in the shell that launches tmuxp, before the session is built.
+start_directory: ~/Projects
+
+# tmux session options, same names as `set -g <option>`.
+options:
+  status: on
+  mouse: on
+
+# tmuxp-specific global options (not tmux options).
+global_options:
+  default-terminal: tmux-256color
+
+# Environment variables set for the whole session.
+environment:
+  SESSION_KIND: dev
+
+windows:
+  # --- Window 1: single pane, one-shot startup command ---
+  - window_name: monitor
+    layout: main-horizontal
+    # Runs before any pane command in this window.
+    shell_command_before: echo "entering monitor window"
+    panes:
+      - btop
+
+  # --- Window 2: multiple panes, different commands each ---
+  - window_name: logs
+    layout: even-horizontal
+    panes:
+      - shell_command:
+          - cd ~/Projects/dotfiles
+          - git log --oneline -20
+      - tail -f /var/log/syslog
+      - htop
+
+  # --- Window 3: per-pane focus + start_directory override ---
+  - window_name: editor
+    start_directory: ~/Projects/dotfiles
+    panes:
+      - shell_command: nvim .
+        focus: true          # cursor lands here when session attaches
+      - # empty pane, just drops you at a shell in start_directory
+
+  # --- Window 4: main-vertical layout + per-pane env vars ---
+  - window_name: services
+    layout: main-vertical
+    options:
+      main-pane-width: 120
+    panes:
+      - shell_command:
+          - source ~/.venv/bin/activate
+          - python manage.py runserver
+        environment:
+          DJANGO_DEBUG: "1"
+      - npm run dev
+      - redis-cli monitor
+
+  # --- Window 5: window-level focus (this window is selected on attach) ---
+  - window_name: scratch
+    focus: true
+    panes:
+      - echo "scratch pad, nothing running"
+
+# Runs after the whole session is built, once, from outside tmux.
+shell_command_after:
+  - echo "dev session ready"

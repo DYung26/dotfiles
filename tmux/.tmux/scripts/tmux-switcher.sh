@@ -114,8 +114,9 @@ drill_repo() { # level 2: pick an exact window/worktree for one repo
   return 0
 }
 
-build_level1() { # one line per repo (with or without a .wt dir): open sessions (via their configured or default name), then not-yet-opened repos
+build_level1() { # one line per repo (with or without a .wt dir), then any other live session not already covered by a repo
   local repo_dir repo session
+  local -A claimed_sessions=()
   for repo_dir in "$PROJECTS_DIR"/*/; do
     repo_dir="${repo_dir%/}"
     [ -d "$repo_dir" ] || continue
@@ -125,12 +126,25 @@ build_level1() { # one line per repo (with or without a .wt dir): open sessions 
     [ -d "$repo_dir/.git" ] || [ -f "$repo_dir/.git" ] || continue
     repo=$(basename "$repo_dir")
     session=$(session_name_for_repo "$repo")
+    claimed_sessions["$session"]=1
     if tmux has-session -t "$session" 2>/dev/null; then
       echo "$repo"
     else
       echo "${repo} (new)"
     fi
   done
+  local live
+  while IFS= read -r live; do
+    [ -z "$live" ] && continue
+    [ -n "${claimed_sessions[$live]:-}" ] && continue
+    echo "$live"
+  done < <(tmux list-sessions -F '#{session_name}' 2>/dev/null || true)
+}
+
+is_known_repo() { # repo name -> 0 if it has a matching directory under Projects/, 1 otherwise
+  local repo="$1"
+  local repo_path="$PROJECTS_DIR/$repo"
+  { [ -d "$repo_path/.git" ] || [ -f "$repo_path/.git" ]; } && [ -d "$repo_path" ]
 }
 
 query=""
@@ -146,6 +160,9 @@ while true; do
   repo="${line% (new)}"
 
   if [ "$key" = "tab" ]; then
+    if ! is_known_repo "$repo"; then
+      continue # no worktree structure to drill into; Tab is a no-op here
+    fi
     if drill_repo "$repo"; then
       exit 0
     else

@@ -1,0 +1,103 @@
+security:
+  enabled: true
+  use_shell_execution: true
+
+  # Legacy mode: full shell (pipes, redirects, control flow, real
+  # interpreters). This is intentional - this instance is meant to back an
+  # agent that behaves like a general-purpose dev shell, same trust level as
+  # the filesystem MCP already writing directly to this tree. The isolation
+  # boundary here is the container + network policy (see
+  # mcp-proxy-shell.compose.yml), not a narrow command allowlist.
+  allowed_commands:
+    - bash
+    - sh
+    - git
+    - ls
+    - cat
+    - head
+    - tail
+    - grep
+    - find
+    - wc
+    - sort
+    - uniq
+    - diff
+    - tree
+    - stat
+    - file
+    - du
+    - realpath
+    - basename
+    - dirname
+    - mkdir
+    - touch
+    - cp
+    - mv
+    - rm
+    - sed
+    - awk
+    - xargs
+    - node
+    - npm
+    - npx
+    - python3
+    - pip3
+    - cargo
+    - rustc
+    - go
+    - make
+    - curl
+    - wget
+    - jq
+    - tar
+    - unzip
+    - zip
+    - ssh
+    - scp
+    - rsync
+    - gpg
+    - yarn
+    - pnpm
+    - tsc
+    - stow
+    - gh
+    - gh-26
+    - gh-06
+    - gh-df
+    - gh-do
+    - gh-odo
+    - chronix
+    - grove
+    - pulse
+    - which
+    - chmod
+    - cd
+
+  # Credential/identity paths - never reachable regardless of which command
+  # is used to try to reach them. This is the one guardrail that matters
+  # once real interpreters are on the allowlist above, since an interpreter
+  # can otherwise read/exfiltrate anything the container can see. Widened
+  # for the full $HOME mount (was previously scoped to just ~/Projects).
+  blocked_patterns:
+    - '(^|\s)(~|/home/dyung)/\.ssh(/|\s|$)'
+    - '(^|\s)(~|/home/dyung)/\.gnupg(/|\s|$)'
+    - '(^|\s)(~|/home/dyung)/\.aws(/|\s|$)'
+    - '(^|\s)(~|/home/dyung)/\.config/gh(/|\s|$)'
+    - '(^|\s)(~|/home/dyung)/\.docker/config\.json(\s|$)'
+    - '(^|\s)(~|/home/dyung)/\.npmrc(\s|$)'
+    - '(^|\s)(~|/home/dyung)/\.netrc(\s|$)'
+    - '(^|\s)(~|/home/dyung)/\.config/gcloud(/|\s|$)'
+    - '(^|\s)(~|/home/dyung)/\.kube(/|\s|$)'
+    - '(^|\s)(~|/home/dyung)/\.password-store(/|\s|$)'
+    - '(^|\s)/etc/(shadow|sudoers|ssh)(/|\s|$)'
+    - '(^|\s)/root(/|\s|$)'
+    - '(^|\s)/var/run/docker\.sock(\s|$)'
+    - 'rm\s+.*-rf.*\s+/(\s|$)'          # rm -rf / and similar root wipes
+    - '\.\./\.\./\.\.'                  # deep traversal out of the mount
+
+  max_execution_time: 300s
+  max_output_size: 10485760
+
+  working_directory: /home/dyung
+
+  audit_log: true

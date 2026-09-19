@@ -18,8 +18,15 @@
 # with no worktree never gets a window.
 #
 set -euo pipefail
-PROJECTS_DIR="$HOME/Projects"
-SESSION_NAMES_CONF="$HOME/Projects/dotfiles/tmux/.tmux/session-names.conf"
+if [ -n "${TMUX_SWITCHER_PROJECTS_DIR:-}" ]; then
+  PROJECTS_DIR="$TMUX_SWITCHER_PROJECTS_DIR"
+elif [ -d "/workspaces" ]; then
+  PROJECTS_DIR="/workspaces"
+else
+  PROJECTS_DIR="$HOME/Projects"
+fi
+DOTFILES_DIR="${TMUX_SWITCHER_DOTFILES_DIR:-$PROJECTS_DIR/dotfiles}"
+SESSION_NAMES_CONF="$DOTFILES_DIR/tmux/.tmux/session-names.conf"
 
 default_branch_window_name() { # repo -> window name for the primary checkout, or empty if none
   local repo="$1"

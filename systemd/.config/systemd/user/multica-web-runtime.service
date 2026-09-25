@@ -1,0 +1,16 @@
+[Unit]
+Description=Multica Web Runtime
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=PATH=%h/.nvm/versions/node/v22.21.0/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:%h/go/bin:%h/.cargo/bin
+Environment=MULTICA_WEB_RUNTIME_WATCH=false
+WorkingDirectory=%h/Projects/multica-web-runtime/daemon
+ExecStart=%h/.nvm/versions/node/v22.21.0/bin/npm run start:all
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -2,7 +2,7 @@ require("toggleterm").setup({
   direction = "vertical",
   size = function(term)
     if term.direction == "vertical" then
-      return math.floor(vim.o.columns * 0.25)
+      return math.floor(vim.o.columns * 0.33)
     elseif term.direction == "horizontal" then
       return 15
     end

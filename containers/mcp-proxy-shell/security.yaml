@@ -72,6 +72,7 @@ security:
     - which
     - chmod
     - cd
+    - multica
 
   # Credential/identity paths - never reachable regardless of which command
   # is used to try to reach them. This is the one guardrail that matters

@@ -40,6 +40,7 @@ local function get_quick(id)
   if not quick_terms[id] then
     quick_terms[id] = register(Terminal:new({ count = id, direction = "vertical", hidden = true }))
   end
+  quick_terms[id].direction = "vertical"
   return quick_terms[id]
 end
 for i = 1, 9 do
@@ -95,13 +96,24 @@ vim.keymap.set("t", "<leader>tk", function()
   end
 end, { desc = "kill current terminal" })
 
--- keep C-h/j/k/l window nav working from inside terminal mode too
 function _G.set_terminal_keymaps()
-  local opts = { buffer = 0 }
-  vim.keymap.set("t", "<esc>", [[<C-\><C-n>]], opts)
-  -- vim.keymap.set("t", "<C-h>", [[<Cmd>wincmd h<CR>]], opts)
-  -- vim.keymap.set("t", "<C-j>", [[<Cmd>wincmd j<CR>]], opts)
-  -- vim.keymap.set("t", "<C-k>", [[<Cmd>wincmd k<CR>]], opts)
-  -- vim.keymap.set("t", "<C-l>", [[<Cmd>wincmd l<CR>]], opts)
+  vim.keymap.set("t", "<esc>", function()
+    local shell_pid = vim.b.terminal_job_id and vim.fn.jobpid(vim.b.terminal_job_id)
+    if not shell_pid or shell_pid <= 0 then
+      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true), "n", false)
+      return
+    end
+
+    local foreground_pgid = vim.fn.trim(vim.fn.system({ "ps", "-o", "tpgid=", "-p", tostring(shell_pid) }))
+    local shell_pgid = vim.fn.trim(vim.fn.system({ "ps", "-o", "pgid=", "-p", tostring(shell_pid) }))
+
+    if foreground_pgid ~= "" and foreground_pgid == shell_pgid then
+      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true), "n", false)
+      return
+    end
+
+    vim.api.nvim_chan_send(vim.b.terminal_job_id, "\27")
+  end, { buffer = 0 })
 end
+
 vim.cmd("autocmd! TermOpen term://*toggleterm#* lua set_terminal_keymaps()")

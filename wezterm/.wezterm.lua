@@ -11,7 +11,7 @@ wezterm.on("format-tab-title", function(tab)
 end)
 
 -- shared config
-config.enable_wayland = false
+-- config.enable_wayland = false
 config.color_scheme = "Catppuccin Mocha"
 
 config.font = wezterm.font_with_fallback({
@@ -22,10 +22,10 @@ config.font = wezterm.font_with_fallback({
   weight = "Bold",
 })
 
-config.font_size = 8.0
+config.font_size = 7.0 -- 8.0
 config.bold_brightens_ansi_colors = true
 
-config.enable_tab_bar = false
+config.enable_tab_bar = true
 config.hide_tab_bar_if_only_one_tab = true
 
 config.window_background_opacity = 0.75
@@ -37,7 +37,7 @@ config.window_background_image_hsb = {
   saturation = 1.0,
 }
 
-config.window_decorations = "RESIZE"
+config.window_decorations = "TITLE | RESIZE"
 config.disable_default_key_bindings = false
 config.use_ime = false
 config.enable_kitty_keyboard = true

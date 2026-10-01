@@ -57,23 +57,6 @@ vim.api.nvim_create_autocmd("sessionloadpost", {
     require("nvim-tree.api").tree.open()
   end
 })
--- Manually trigger an OSC 52 broadcast on every yank
--- This sends the text "through" SSH/Tmux to your local machine
-vim.api.nvim_create_autocmd("TextYankPost", {
-    --[[ callback = function()
-        if vim.v.event.operator == "y" and vim.v.event.regname == "+" or vim.v.event.regname == "" then
-            require('vim.ui.clipboard.osc52').copy('+')(vim.v.event.regcontents)
-        end
-    end, ]]
-    callback = function()
-        -- Trigger if the yank went to the default register or the system clipboard
-        local reg = vim.v.event.regname
-        if reg == "+" or reg == "*" or reg == "" then
-            require('vim.ui.clipboard.osc52').copy('+')(vim.v.event.regcontents)
-        end
-    end,
-})
-
 --[[vim.api.nvim_create_user_command("resizetolongestline", function()
   local max_length = 0
   for _, line in ipairs(vim.api.nvim_buf_get_lines(0, 0, -1, false)) do

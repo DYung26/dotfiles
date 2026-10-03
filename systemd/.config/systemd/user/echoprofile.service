@@ -14,6 +14,8 @@ Type=simple
 # Not appropriate for a long-running background service.
 Environment=ECHOPROFILE_NO_RELOAD=1
 Environment=ECHOPROFILE_HOST=0.0.0.0
+Environment=ECHOPROFILE_SWITCHBOARD_DIR=%h/Projects/switchboard.wt/feat-network-replay/dist
+Environment=ECHOPROFILE_MULTICA_DIR=%h/Projects/multica-web-runtime/extension/dist
 ExecStart=%h/.local/bin/echoprofile serve
 Restart=on-failure
 RestartSec=2

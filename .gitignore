@@ -287,3 +287,11 @@ backups/
 *.googlerc
 *.heroku
 .heroku/
+
+# Machine-specific NVM command links
+bin/bin/node
+bin/bin/npm
+bin/bin/npx
+
+# Generated Cloudflare configuration
+cloudflared/.cloudflared/*.rendered

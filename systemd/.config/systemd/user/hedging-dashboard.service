@@ -6,10 +6,11 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=%h/Projects/hedging/dashboard
-ExecStart=%h/.local/bin/npm run dev -- --host 0.0.0.0 --port 4174
+ExecStart=%h/.local/bin/npm run preview -- --host 0.0.0.0 --port 4175
 Restart=on-failure
 RestartSec=3
 Environment=NODE_ENV=production
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 
 [Install]
 WantedBy=default.target

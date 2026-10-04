@@ -1,0 +1,15 @@
+[Unit]
+Description=Hedging Dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Projects/hedging/dashboard
+ExecStart=%h/.local/bin/npm run dev -- --host 0.0.0.0 --port 4174
+Restart=on-failure
+RestartSec=3
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=default.target

@@ -1,7 +1,23 @@
+-- Folding: familiar Vim keys plus mnemonic leader shortcuts.
+-- zc/zo close/open one fold; za toggles; zM/zR close/open all folds.
+-- These native fold keys work in Normal mode without plugins.
+
 -- keybinds for lsp
 
 vim.g.mapleader = " " -- "\\"                                                                      -- set leader
 vim.g.maplocalleader = "\\"
+
+vim.keymap.set("n", "<leader>z", "za", { remap = true, desc = "toggle fold under cursor" })
+vim.keymap.set("n", "<leader>fc", "zc", { remap = true, desc = "close fold" })
+vim.keymap.set("n", "<leader>fo", "zo", { remap = true, desc = "open fold" })
+vim.keymap.set("n", "<leader>fa", "za", { remap = true, desc = "toggle fold" })
+vim.keymap.set("n", "<leader>fC", "zM", { remap = true, desc = "close all folds" })
+vim.keymap.set("n", "<leader>fO", "zR", { remap = true, desc = "open all folds" })
+vim.keymap.set("n", "<leader>ff", function()
+  require("dyung.folding").refresh()
+  vim.cmd("normal! zx")
+  vim.notify("Folding method: " .. vim.wo.foldmethod)
+end, { desc = "refresh folding method" })
 
 
 vim.keymap.set('n', '<leader>gv', 'ggvggq', { desc = 'format/wrap whole file' }) -- ggvg=

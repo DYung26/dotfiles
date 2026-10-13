@@ -17,6 +17,14 @@ vim.opt.sessionoptions = {
   "help", "globals"
 }
 vim.opt.termguicolors = true
+
+-- Folding defaults are global; dyung.folding selects the best method per buffer.
+vim.opt.foldenable = true
+vim.opt.foldlevel = 99       -- start expanded; folds remain available to close
+vim.opt.foldlevelstart = 99
+vim.opt.foldcolumn = "1"     -- visible fold guides and clickable fold markers
+vim.opt.foldminlines = 1
+vim.opt.fillchars:append({ fold = "─", foldopen = "▾", foldclose = "▸", foldsep = "│" })
 vim.opt.sessionoptions:append("localoptions")
 -- vim.opt.statusline:append " %y"
 vim.opt.statusline = "%f %m %r %h %w [%{&filetype}] %=%-14.(%l,%c%v%) %p"

@@ -1,6 +1,7 @@
 print("init.lua loaded") -- replace with: vim.notify(...)
 
 require("dyung.options")
+require("dyung.folding").setup()
 require("dyung.keymaps")
 require("dyung.autocmds")
 

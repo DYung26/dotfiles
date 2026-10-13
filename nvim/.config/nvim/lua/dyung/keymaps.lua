@@ -7,6 +7,10 @@
 vim.g.mapleader = " " -- "\\"                                                                      -- set leader
 vim.g.maplocalleader = "\\"
 
+-- Page through the buffer with one-line overlap at each screen boundary.
+vim.keymap.set("n", "<leader>j", "Lzt", { desc = "page forward with line overlap" })
+vim.keymap.set("n", "<leader>k", "Hzb", { desc = "page backward with line overlap" })
+
 vim.keymap.set("n", "<leader>z", "za", { remap = true, desc = "toggle fold under cursor" })
 vim.keymap.set("n", "<leader>fc", "zc", { remap = true, desc = "close fold" })
 vim.keymap.set("n", "<leader>fo", "zo", { remap = true, desc = "open fold" })

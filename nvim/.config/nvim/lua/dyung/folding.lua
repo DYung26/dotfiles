@@ -21,6 +21,15 @@ local function configure_buffer(buf)
   end
 
   vim.api.nvim_win_call(win, function()
+    -- Diffview manages folding in its diff windows (foldmethod=diff and
+    -- foldlevel=0). Do not overwrite those settings with our expanded-by-
+    -- default policy. This also covers real-file buffers displayed in diff mode.
+    local name = vim.api.nvim_buf_get_name(buf)
+    local filetype = vim.bo[buf].filetype
+    if vim.wo.diff or name:match("^diffview://") or filetype:match("^Diffview") then
+      return
+    end
+
     -- Do not enable folds in special/prompt buffers.
     if vim.bo[buf].buftype ~= "" then
       vim.wo.foldenable = false

@@ -9,11 +9,11 @@ if ($env:OS -ne 'Windows_NT') { throw 'Run this installer in PowerShell on Windo
 $UserHome = [IO.Path]::GetFullPath($env:USERPROFILE).TrimEnd('\')
 $LocalRoot = Join-Path $env:LOCALAPPDATA 'McpShell'
 $BinDir = Join-Path $UserHome '.local\bin'
-$CloudflaredDir = Join-Path $UserHome '.cloudflared'
+$CloudflaredDir = Join-Path $LocalRoot 'cloudflared'
 $CloudflaredConfig = Join-Path $CloudflaredDir 'config.yml'
 $CredentialName = '5d72e218-636e-4184-85cf-4b7a25acc383.json'
-$CredentialSource = Join-Path $RepoRoot "cloudflared\.cloudflared\$CredentialName"
 $CredentialTarget = Join-Path $CloudflaredDir $CredentialName
+$CloudflaredCert = Join-Path $CloudflaredDir 'cert.pem'
 $PolicyTemplate = Join-Path $RepoRoot 'mcp-shell-privileged\.config\mcp-shell\security.windows.yaml'
 $PolicyTarget = Join-Path $LocalRoot 'security.yaml'
 $CloudflaredTemplate = Join-Path $RepoRoot 'cloudflared\.cloudflared\config.windows.yml'
@@ -81,16 +81,16 @@ if (-not (Test-Path $CloudflaredExe)) {
     Invoke-WebRequest -Uri 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe' -OutFile $CloudflaredExe
 }
 
-if (Test-Path $CredentialSource) {
-    Copy-Item -Force $CredentialSource $CredentialTarget
-} elseif (-not (Test-Path $CredentialTarget)) {
-    # Tunnel credentials are intentionally excluded from Git. Provision them on
-    # this machine with a one-time Cloudflare browser login instead of copying
-    # private credentials between devices.
+if (-not (Test-Path $CredentialTarget)) {
+    # Keep tunnel credentials and the account origin certificate in local app
+    # data; never synchronize them through the dotfiles checkout.
     Write-Host 'Cloudflare tunnel credentials are missing; opening Cloudflare login in the browser.'
-    & $CloudflaredExe tunnel login
-    if ($LASTEXITCODE -ne 0) { throw "cloudflared tunnel login failed (exit $LASTEXITCODE)." }
-    & $CloudflaredExe tunnel token --cred-file $CredentialTarget mcp.laptop-ab9612ik
+    $env:TUNNEL_ORIGIN_CERT = $CloudflaredCert
+    & $CloudflaredExe tunnel --origincert $CloudflaredCert login
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $CloudflaredCert)) {
+        throw "cloudflared tunnel login failed or did not create $CloudflaredCert."
+    }
+    & $CloudflaredExe tunnel --origincert $CloudflaredCert token --cred-file $CredentialTarget mcp.laptop-ab9612ik
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path $CredentialTarget)) {
         throw "Could not provision credentials for tunnel mcp.laptop-ab9612ik."
     }
@@ -142,7 +142,7 @@ $ErrorActionPreference = 'Continue'
 $home = [IO.Path]::GetFullPath($env:USERPROFILE)
 $root = Join-Path $env:LOCALAPPDATA 'McpShell'
 $exe = Join-Path $home '.local\bin\cloudflared.exe'
-$config = Join-Path $home '.cloudflared\config.yml'
+$config = Join-Path $root 'cloudflared\config.yml'
 $log = Join-Path $root 'logs\cloudflared.log'
 while ($true) {
     "$(Get-Date -Format o) starting cloudflared tunnel" | Add-Content -LiteralPath $log

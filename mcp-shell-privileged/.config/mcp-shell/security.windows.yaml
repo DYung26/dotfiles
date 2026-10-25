@@ -70,6 +70,7 @@ security:
     - multica
 
   blocked_patterns:
+    # Windows native paths. Placeholders are expanded by the installer.
     - '(?i)(^|\s)__HOME_REGEX__\\\.ssh(\\|\s|$)'
     - '(?i)(^|\s)__HOME_REGEX__\\\.gnupg(\\|\s|$)'
     - '(?i)(^|\s)__HOME_REGEX__\\\.aws(\\|\s|$)'
@@ -80,6 +81,7 @@ security:
     - '(?i)(^|\s)__HOME_REGEX__\\\.config\\gcloud(\\|\s|$)'
     - '(?i)(^|\s)__HOME_REGEX__\\\.kube(\\|\s|$)'
     - '(?i)(^|\s)__HOME_REGEX__\\\.password-store(\\|\s|$)'
+    # Git Bash path variants of the same sensitive locations.
     - '(?i)(^|\s)__GIT_BASH_HOME_REGEX__/\.ssh(/|\s|$)'
     - '(?i)(^|\s)__GIT_BASH_HOME_REGEX__/\.gnupg(/|\s|$)'
     - '(?i)(^|\s)__GIT_BASH_HOME_REGEX__/\.aws(/|\s|$)'

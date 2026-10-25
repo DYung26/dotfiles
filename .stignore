@@ -1,0 +1,9 @@
+.git
+*env*
+
+# Cloudflare credentials are per-device secrets; never sync them via dotfiles.
+cloudflared/.cloudflared/*.json
+cloudflared/.cloudflared/cert.pem
+
+# Do not propagate conflict copies between devices.
+*sync-conflict*

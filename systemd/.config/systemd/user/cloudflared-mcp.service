@@ -4,7 +4,7 @@ After=network-online.target mcp.service
 ; Requires=mcp.service
 
 [Service]
-EnvironmentFile=%h/.config/mcp/env
+EnvironmentFile=%h/Projects/dotfiles/cloudflared/.cloudflared/tunnel-%H.conf
 ExecStart=%h/bin/start-cloudflared.sh
 Restart=always
 RestartSec=5

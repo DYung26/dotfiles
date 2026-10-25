@@ -8,8 +8,8 @@ fi
 : "${CLOUDFLARED_CREDENTIALS_FILE:?CLOUDFLARED_CREDENTIALS_FILE must be set}"
 : "${CLOUDFLARED_SERVICE:?CLOUDFLARED_SERVICE must be set}"
 
-CONFIG_TEMPLATE="${HOME}/.cloudflared/config.yml"
-CONFIG_RENDERED="${HOME}/.cloudflared/config.yml.rendered"
+CONFIG_TEMPLATE="${CLOUDFLARED_CONFIG_TEMPLATE:-${HOME}/.cloudflared/config.yml}"
+CONFIG_RENDERED="${CLOUDFLARED_CONFIG_RENDERED:-${HOME}/.cloudflared/config.yml.rendered}"
 
 envsubst < "${CONFIG_TEMPLATE}" > "${CONFIG_RENDERED}"
-exec cloudflared tunnel --config "${CONFIG_RENDERED}" --loglevel debug run
+exec cloudflared tunnel --config "${CONFIG_RENDERED}" --loglevel info run

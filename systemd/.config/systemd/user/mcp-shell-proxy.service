@@ -5,7 +5,7 @@ After=network-online.target
 [Service]
 Type=simple
 Environment=PATH=/home/dyung/.local/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/home/dyung/go/bin:/home/dyung/.cargo/bin
-Environment=MCP_SHELL_SEC_CONFIG_FILE=/home/dyung/Projects/dotfiles/containers/mcp-proxy-shell/security.yaml
+Environment=MCP_SHELL_SEC_CONFIG_FILE=/home/dyung/Projects/dotfiles/mcp-shell-privileged/.config/mcp-shell/security.yaml
 ExecStart=%h/.local/bin/mcp-proxy --port=8090 --host=0.0.0.0 --pass-environment -- %h/go/bin/mcp-shell
 Restart=always
 RestartSec=5

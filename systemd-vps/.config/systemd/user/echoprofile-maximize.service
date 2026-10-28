@@ -1,0 +1,12 @@
+[Unit]
+Description=Maximize the EchoProfile Chromium window on its virtual display
+Requires=echoprofile.service echoprofile-wm.service
+After=echoprofile.service echoprofile-wm.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/echoprofile-maximize-window
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target

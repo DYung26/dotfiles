@@ -1,10 +1,11 @@
 [CmdletBinding()]
 param(
-    [string]$RepoRoot = (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent),
+    [string]$RepoRoot,
     [string]$McpShellSource,
     [switch]$EnableCloudflared
 )
 $ErrorActionPreference = 'Stop'
+if (-not $RepoRoot) { $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path }
 if ($env:OS -ne 'Windows_NT') { throw 'Run this installer in PowerShell on Windows.' }
 
 $UserHome = [IO.Path]::GetFullPath($env:USERPROFILE).TrimEnd('\')
@@ -12,6 +13,7 @@ $LocalRoot = Join-Path $env:LOCALAPPDATA 'McpShell'
 $BinDir = Join-Path $UserHome '.local\bin'
 $CloudflaredDir = Join-Path $LocalRoot 'cloudflared'
 $CloudflaredConfig = Join-Path $CloudflaredDir 'config.yml'
+$CloudflaredEnvFile = Join-Path $CloudflaredDir 'tunnel.conf'
 $CredentialName = '5d72e218-636e-4184-85cf-4b7a25acc383.json'
 $CredentialTarget = Join-Path $CloudflaredDir $CredentialName
 $CloudflaredCert = Join-Path $CloudflaredDir 'cert.pem'
@@ -36,7 +38,7 @@ if (-not $McpShellSource) {
 }
 function Refresh-UserPath {
     $candidates = @($BinDir, $GoBin, 'C:\Program Files\Go\bin', 'C:\Program Files\Git\bin', 'C:\Program Files\Git\usr\bin')
-    $env:Path = (($candidates + $env:Path.Split(';') | Where-Object { $_ -and (Test-Path $_ -or $_ -eq $BinDir) } | Select-Object -Unique) -join ';')
+    $env:Path = (($candidates + $env:Path.Split(';') | Where-Object { $_ -and ((Test-Path $_) -or ($_ -eq $BinDir)) } | Select-Object -Unique) -join ';')
 }
 function Resolve-CommandPath([string]$Name) {
     $cmd = Get-Command $Name -ErrorAction SilentlyContinue
@@ -110,14 +112,20 @@ if (-not (Test-Path $CloudflaredExe)) {
     Invoke-WebRequest -Uri 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe' -OutFile $CloudflaredExe
 }
 
+if (-not (Test-Path $CloudflaredCert)) {
+    $existingCert = Join-Path $UserHome '.cloudflared\cert.pem'
+    if (Test-Path $existingCert) { Copy-Item -LiteralPath $existingCert -Destination $CloudflaredCert -Force }
+}
 if (-not (Test-Path $CredentialTarget)) {
     # Keep tunnel credentials and the account origin certificate in local app
     # data; never synchronize them through the dotfiles checkout.
-    Write-Host 'Cloudflare tunnel credentials are missing; opening Cloudflare login in the browser.'
-    $env:TUNNEL_ORIGIN_CERT = $CloudflaredCert
-    & $CloudflaredExe tunnel --origincert $CloudflaredCert login
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $CloudflaredCert)) {
-        throw "cloudflared tunnel login failed or did not create $CloudflaredCert."
+    if (-not (Test-Path $CloudflaredCert)) {
+        Write-Host 'Cloudflare origin certificate is missing; opening Cloudflare login in the browser.'
+        $env:TUNNEL_ORIGIN_CERT = $CloudflaredCert
+        & $CloudflaredExe tunnel --origincert $CloudflaredCert login
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $CloudflaredCert)) {
+            throw "cloudflared tunnel login failed or did not create $CloudflaredCert."
+        }
     }
     & $CloudflaredExe tunnel --origincert $CloudflaredCert token --cred-file $CredentialTarget mcp.laptop-ab9612ik
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path $CredentialTarget)) {
@@ -141,22 +149,36 @@ $policy = $policy.Replace('__WINDOWS_HOME_SLASH__', $homeSlash)
 
 if (-not (Test-Path $CloudflaredTemplate)) { throw "Missing Cloudflare template: $CloudflaredTemplate" }
 $credentialPosix = $CredentialTarget.Replace('\', '/')
+$templatePosix = $CloudflaredTemplate.Replace('\', '/')
+$configPosix = $CloudflaredConfig.Replace('\', '/')
+$cloudflaredEnv = @(
+    "CLOUDFLARED_CREDENTIALS_FILE=$credentialPosix",
+    'CLOUDFLARED_TUNNEL_NAME=mcp.laptop-ab9612ik',
+    'CLOUDFLARED_HOSTNAME=laptop-ab9612ik-mcp.dyung.me',
+    'CLOUDFLARED_SERVICE=http://127.0.0.1:8090',
+    "CLOUDFLARED_CONFIG_TEMPLATE=$templatePosix",
+    "CLOUDFLARED_CONFIG_RENDERED=$configPosix"
+) -join [Environment]::NewLine
+[IO.File]::WriteAllText($CloudflaredEnvFile, $cloudflaredEnv + [Environment]::NewLine, [Text.UTF8Encoding]::new($false))
 $config = Get-Content -Raw -LiteralPath $CloudflaredTemplate
-$config = $config.Replace('__WINDOWS_CREDENTIALS_FILE__', $credentialPosix)
+$config = $config.Replace('${CLOUDFLARED_TUNNEL_NAME}', 'mcp.laptop-ab9612ik')
+$config = $config.Replace('${CLOUDFLARED_CREDENTIALS_FILE}', $credentialPosix)
+$config = $config.Replace('${CLOUDFLARED_HOSTNAME}', 'laptop-ab9612ik-mcp.dyung.me')
+$config = $config.Replace('${CLOUDFLARED_SERVICE}', 'http://127.0.0.1:8090')
 [IO.File]::WriteAllText($CloudflaredConfig, $config, [Text.UTF8Encoding]::new($false))
 
 $proxyRunner = @'
 $ErrorActionPreference = 'Continue'
-$home = [IO.Path]::GetFullPath($env:USERPROFILE)
+$userHome = [IO.Path]::GetFullPath($env:USERPROFILE)
 $root = Join-Path $env:LOCALAPPDATA 'McpShell'
-$proxy = Join-Path $home '.local\bin\mcp-proxy.exe'
-$shell = Join-Path $home 'go\bin\mcp-shell.exe'
+$proxy = Join-Path $userHome '.local\bin\mcp-proxy.exe'
+$shell = Join-Path $userHome 'go\bin\mcp-shell.exe'
 $policy = Join-Path $root 'security.yaml'
 $log = Join-Path $root 'logs\mcp-proxy.log'
-$env:HOME = $home
+$env:HOME = $userHome
 $env:MCP_SHELL_SEC_CONFIG_FILE = $policy
 $env:MCP_SHELL_LOG_LEVEL = 'info'
-$env:PATH = "$home\.local\bin;$home\go\bin;C:\Program Files\Git\bin;C:\Program Files\Git\usr\bin;$env:PATH"
+$env:PATH = "$userHome\.local\bin;$userHome\go\bin;C:\Program Files\Git\bin;C:\Program Files\Git\usr\bin;$env:PATH"
 while ($true) {
     "$(Get-Date -Format o) starting mcp-proxy on 127.0.0.1:8090" | Add-Content -LiteralPath $log
     & $proxy --port=8090 --host=127.0.0.1 --pass-environment -- $shell *>> $log
@@ -168,14 +190,31 @@ Set-Content -LiteralPath $StartProxyScript -Value $proxyRunner -Encoding UTF8
 
 $cloudflaredRunner = @'
 $ErrorActionPreference = 'Continue'
-$home = [IO.Path]::GetFullPath($env:USERPROFILE)
+$userHome = [IO.Path]::GetFullPath($env:USERPROFILE)
 $root = Join-Path $env:LOCALAPPDATA 'McpShell'
-$exe = Join-Path $home '.local\bin\cloudflared.exe'
-$config = Join-Path $root 'cloudflared\config.yml'
+$cloudDir = Join-Path $root 'cloudflared'
+$envFile = Join-Path $cloudDir 'tunnel.conf'
+$exe = Join-Path $userHome '.local\bin\cloudflared.exe'
 $log = Join-Path $root 'logs\cloudflared.log'
 while ($true) {
-    "$(Get-Date -Format o) starting cloudflared tunnel" | Add-Content -LiteralPath $log
-    & $exe tunnel --config $config run *>> $log
+    foreach ($line in Get-Content -LiteralPath $envFile) {
+        $separator = $line.IndexOf('=')
+        if ($separator -gt 0 -and -not $line.TrimStart().StartsWith('#')) {
+            $key = $line.Substring(0, $separator).Trim()
+            $value = $line.Substring($separator + 1).Trim()
+            [Environment]::SetEnvironmentVariable($key, $value, 'Process')
+        }
+    }
+    $template = $env:CLOUDFLARED_CONFIG_TEMPLATE
+    $config = $env:CLOUDFLARED_CONFIG_RENDERED
+    $content = Get-Content -Raw -LiteralPath $template
+    $content = $content.Replace('${CLOUDFLARED_TUNNEL_NAME}', $env:CLOUDFLARED_TUNNEL_NAME)
+    $content = $content.Replace('${CLOUDFLARED_CREDENTIALS_FILE}', $env:CLOUDFLARED_CREDENTIALS_FILE)
+    $content = $content.Replace('${CLOUDFLARED_HOSTNAME}', $env:CLOUDFLARED_HOSTNAME)
+    $content = $content.Replace('${CLOUDFLARED_SERVICE}', $env:CLOUDFLARED_SERVICE)
+    [IO.File]::WriteAllText($config, $content, [Text.UTF8Encoding]::new($false))
+    "$(Get-Date -Format o) starting cloudflared tunnel $env:CLOUDFLARED_TUNNEL_NAME" | Add-Content -LiteralPath $log
+    & $exe tunnel --config $config --loglevel info run *>> $log
     "$(Get-Date -Format o) cloudflared exited with code $LASTEXITCODE; restarting in 5 seconds" | Add-Content -LiteralPath $log
     Start-Sleep -Seconds 5
 }
@@ -185,7 +224,7 @@ Set-Content -LiteralPath $StartCloudflaredScript -Value $cloudflaredRunner -Enco
 $powerShellExe = Join-Path $PSHOME 'powershell.exe'
 if (-not (Test-Path $powerShellExe)) { $powerShellExe = (Get-Command pwsh.exe -ErrorAction SilentlyContinue).Source }
 if (-not $powerShellExe) { throw 'Could not locate powershell.exe/pwsh.exe.' }
-$userId = "$env:USERDOMAIN\$env:USERNAME"
+$userId = [Security.Principal.WindowsIdentity]::GetCurrent().Name
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $userId
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 $principal = New-ScheduledTaskPrincipal -UserId $userId -LogonType Interactive -RunLevel Limited

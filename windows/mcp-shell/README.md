@@ -1,6 +1,6 @@
 # Windows MCP shell and Cloudflare tunnel
 
-This setup uses Windows Task Scheduler at user logon, not systemd. The installer builds a Windows-native mcp-shell executable from the local `DYung26/mcp-shell` checkout, installs mcp-proxy with uv, installs cloudflared, creates a Windows-specific security policy, and writes %LOCALAPPDATA%\McpShell\cloudflared\config.yml. The proxy listens only on 127.0.0.1:8090, and Cloudflare routes laptop-ab9612ik-mcp.dyung.me to that port.
+This setup uses Windows Task Scheduler at user logon, not systemd. The installer builds a Windows-native mcp-shell executable from the local `DYung26/mcp-shell` checkout, installs mcp-proxy with uv, installs cloudflared, creates a Windows-specific security policy, and renders `%LOCALAPPDATA%\McpShell\cloudflared\config.yml` from the dotfiles template. The proxy listens only on `127.0.0.1:8090`; the `mcp.laptop-ab9612ik` tunnel routes `laptop-ab9612ik-mcp.dyung.me` directly to that port, not through Meta MCP.
 
 Run in PowerShell as the normal user from the synced dotfiles repository. By default, the installer looks for `..\mcp-shell` or `..\mcp-shell-src` next to the dotfiles checkout. You can pass `-McpShellSource <path>` to select another checkout. If neither exists, it clones your fork to `%LOCALAPPDATA%\McpShell\src`.
 
@@ -11,7 +11,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 
 The installer registers McpShellProxy-Laptop to start at user logon. It also creates Cloudflared-Mcp-Laptop but leaves that task disabled by default.
 
-The tunnel credentials and Cloudflare origin certificate are kept in %LOCALAPPDATA%\McpShell\cloudflared, outside the synced dotfiles checkout. On first setup, the installer opens a one-time Cloudflare browser login and provisions a local credential for the existing mcp.laptop-ab9612ik tunnel. No private credential needs to be committed or synced between devices.
+The tunnel credentials and Cloudflare origin certificate are kept in `%LOCALAPPDATA%\McpShell\cloudflared`, outside the synced dotfiles checkout. The installer reuses `%USERPROFILE%\.cloudflared\cert.pem` when available and provisions a local credential for the existing `mcp.laptop-ab9612ik` tunnel. The non-secret `tunnel.conf` environment file follows the VPS pattern (`CLOUDFLARED_TUNNEL_NAME`, `CLOUDFLARED_HOSTNAME`, `CLOUDFLARED_SERVICE`, and config paths); the scheduled runner loads it and renders `config.yml` from `cloudflared/.cloudflared/config.windows.yml` at startup. No private credential is committed or synced between devices.
 
 Security note: the current mcp-shell policy mirrors the Linux hosts' legacy shell-execution mode. Do not treat allowed_commands as a strong sandbox in legacy mode. Before enabling the public tunnel, configure Cloudflare Access or another real authentication layer for laptop-ab9612ik-mcp.dyung.me. After that, run:
 

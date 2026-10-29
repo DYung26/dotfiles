@@ -1,11 +1,11 @@
 # Windows-specific locally managed tunnel template.
-# Install-McpWindows.ps1 renders this to %USERPROFILE%\.cloudflared\config.yml.
-tunnel: 5d72e218-636e-4184-85cf-4b7a25acc383
-credentials-file: __WINDOWS_CREDENTIALS_FILE__
+# Start-Cloudflared.ps1 renders this to %LOCALAPPDATA%\McpShell\cloudflared\config.yml.
+tunnel: ${CLOUDFLARED_TUNNEL_NAME}
+credentials-file: ${CLOUDFLARED_CREDENTIALS_FILE}
 
 ingress:
-  - hostname: laptop-ab9612ik-mcp.dyung.me
-    service: http://127.0.0.1:8090
+  - hostname: ${CLOUDFLARED_HOSTNAME}
+    service: ${CLOUDFLARED_SERVICE}
     originRequest:
       noTLSVerify: true
 

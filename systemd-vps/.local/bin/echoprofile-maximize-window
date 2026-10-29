@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+export DISPLAY=:2
+for i in $(seq 1 90); do
+  wid="$(wmctrl -l | grep "Google Chrome for Testing" | head -n 1 | cut -d " " -f 1)"
+  if [ -n "$wid" ]; then
+    wmctrl -ir "$wid" -b remove,hidden || true
+    wmctrl -ir "$wid" -b add,maximized_vert,maximized_horz
+    sleep 1
+    geometry="$(wmctrl -lG | grep -F "$wid" || true)"
+    echo "$geometry"
+    echo "$geometry" | grep -q "3072 1600" && exit 0
+  fi
+  sleep 2
+done
+exit 1

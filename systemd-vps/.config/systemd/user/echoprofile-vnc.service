@@ -1,0 +1,15 @@
+[Unit]
+Description=Tailnet-bound VNC for the EchoProfile browser display
+Requires=echoprofile.service
+After=echoprofile.service
+
+[Service]
+Type=simple
+Environment=DISPLAY=:2
+ExecStartPre=/usr/bin/bash -c "for i in $(seq 1 50); do [ -S /tmp/.X11-unix/X2 ] && exit 0; sleep 0.1; done; exit 1"
+ExecStart=/usr/bin/x11vnc -noipv6 -display :2 -listen 100.82.234.105 -rfbport 5901 -rfbauth %h/.vnc/mt5-vnc.pass -forever -shared -noxdamage -modtweak -xkb
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

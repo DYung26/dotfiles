@@ -1,0 +1,15 @@
+[Unit]
+Description=Openbox window manager for EchoProfile virtual display
+Requires=echoprofile.service
+After=echoprofile.service
+
+[Service]
+Type=simple
+Environment=DISPLAY=:2
+ExecStartPre=/usr/bin/bash -c "for i in $(seq 1 50); do [ -S /tmp/.X11-unix/X2 ] && exit 0; sleep 0.1; done; exit 1"
+ExecStart=/usr/bin/openbox --sm-disable
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

@@ -15,7 +15,8 @@ Type=simple
 # and be clickable instead of the request failing silently before you can
 # respond to it.
 ExecStartPre=/usr/bin/sleep 5
-ExecStart=/usr/bin/input-leapc --no-tray --debug DEBUG --name %H LAPTOP-AB9612IK.local
+EnvironmentFile=-%h/.config/input-leap/client.env
+ExecStart=/usr/bin/input-leapc --no-daemon --no-tray --debug INFO --name ${INPUT_LEAP_CLIENT_NAME:-%H} --disable-crypto ${INPUT_LEAP_SERVER:-LAPTOP-AB9612IK.local}
 Restart=on-failure
 RestartSec=5
 

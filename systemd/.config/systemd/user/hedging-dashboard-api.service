@@ -1,0 +1,17 @@
+[Unit]
+Description=Hedging Dashboard API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Projects/hedging/dashboard
+ExecStart=/usr/bin/python3 %h/Projects/hedging/dashboard/server.py
+Restart=on-failure
+RestartSec=3
+Environment=HEDGING_DASHBOARD_HOST=0.0.0.0
+Environment=HEDGING_DASHBOARD_PORT=4176
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

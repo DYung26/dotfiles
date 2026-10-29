@@ -170,19 +170,22 @@ $config = $config.Replace('${CLOUDFLARED_SERVICE}', 'http://127.0.0.1:8090')
 $proxyRunner = @'
 $ErrorActionPreference = 'Continue'
 $userHome = [IO.Path]::GetFullPath($env:USERPROFILE)
+$mutex = [Threading.Mutex]::new($false, 'Local\McpShellProxyLauncher')
+if (-not $mutex.WaitOne(0)) { exit 0 }
 $root = Join-Path $env:LOCALAPPDATA 'McpShell'
 $proxy = Join-Path $userHome '.local\bin\mcp-proxy.exe'
 $shell = Join-Path $userHome 'go\bin\mcp-shell.exe'
 $policy = Join-Path $root 'security.yaml'
 $log = Join-Path $root 'logs\mcp-proxy.log'
+$supervisorLog = Join-Path $root 'logs\mcp-proxy-supervisor.log'
 $env:HOME = $userHome
 $env:MCP_SHELL_SEC_CONFIG_FILE = $policy
 $env:MCP_SHELL_LOG_LEVEL = 'info'
 $env:PATH = "$userHome\.local\bin;$userHome\go\bin;C:\Program Files\Git\bin;C:\Program Files\Git\usr\bin;$env:PATH"
 while ($true) {
-    "$(Get-Date -Format o) starting mcp-proxy on 127.0.0.1:8090" | Add-Content -LiteralPath $log
+    "$(Get-Date -Format o) starting mcp-proxy on 127.0.0.1:8090" | Add-Content -LiteralPath $supervisorLog
     & $proxy --port=8090 --host=127.0.0.1 --pass-environment -- $shell *>> $log
-    "$(Get-Date -Format o) mcp-proxy exited with code $LASTEXITCODE; restarting in 5 seconds" | Add-Content -LiteralPath $log
+    "$(Get-Date -Format o) mcp-proxy exited with code $LASTEXITCODE; restarting in 5 seconds" | Add-Content -LiteralPath $supervisorLog
     Start-Sleep -Seconds 5
 }
 '@
@@ -191,11 +194,14 @@ Set-Content -LiteralPath $StartProxyScript -Value $proxyRunner -Encoding UTF8
 $cloudflaredRunner = @'
 $ErrorActionPreference = 'Continue'
 $userHome = [IO.Path]::GetFullPath($env:USERPROFILE)
+$mutex = [Threading.Mutex]::new($false, 'Local\CloudflaredMcpLauncher')
+if (-not $mutex.WaitOne(0)) { exit 0 }
 $root = Join-Path $env:LOCALAPPDATA 'McpShell'
 $cloudDir = Join-Path $root 'cloudflared'
 $envFile = Join-Path $cloudDir 'tunnel.conf'
 $exe = Join-Path $userHome '.local\bin\cloudflared.exe'
 $log = Join-Path $root 'logs\cloudflared.log'
+$supervisorLog = Join-Path $root 'logs\cloudflared-supervisor.log'
 while ($true) {
     foreach ($line in Get-Content -LiteralPath $envFile) {
         $separator = $line.IndexOf('=')
@@ -213,9 +219,9 @@ while ($true) {
     $content = $content.Replace('${CLOUDFLARED_HOSTNAME}', $env:CLOUDFLARED_HOSTNAME)
     $content = $content.Replace('${CLOUDFLARED_SERVICE}', $env:CLOUDFLARED_SERVICE)
     [IO.File]::WriteAllText($config, $content, [Text.UTF8Encoding]::new($false))
-    "$(Get-Date -Format o) starting cloudflared tunnel $env:CLOUDFLARED_TUNNEL_NAME" | Add-Content -LiteralPath $log
+    "$(Get-Date -Format o) starting cloudflared tunnel $env:CLOUDFLARED_TUNNEL_NAME" | Add-Content -LiteralPath $supervisorLog
     & $exe tunnel --config $config --loglevel info run *>> $log
-    "$(Get-Date -Format o) cloudflared exited with code $LASTEXITCODE; restarting in 5 seconds" | Add-Content -LiteralPath $log
+    "$(Get-Date -Format o) cloudflared exited with code $LASTEXITCODE; restarting in 5 seconds" | Add-Content -LiteralPath $supervisorLog
     Start-Sleep -Seconds 5
 }
 '@
@@ -226,10 +232,10 @@ if (-not (Test-Path $powerShellExe)) { $powerShellExe = (Get-Command pwsh.exe -E
 if (-not $powerShellExe) { throw 'Could not locate powershell.exe/pwsh.exe.' }
 $userId = [Security.Principal.WindowsIdentity]::GetCurrent().Name
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $userId
-$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew
 $principal = New-ScheduledTaskPrincipal -UserId $userId -LogonType Interactive -RunLevel Limited
-$proxyArg = '-NoProfile -ExecutionPolicy Bypass -File "' + $StartProxyScript + '"'
-$cloudflaredArg = '-NoProfile -ExecutionPolicy Bypass -File "' + $StartCloudflaredScript + '"'
+$proxyArg = '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $StartProxyScript + '"'
+$cloudflaredArg = '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $StartCloudflaredScript + '"'
 $proxyAction = New-ScheduledTaskAction -Execute $powerShellExe -Argument $proxyArg
 Register-ScheduledTask -TaskName 'McpShellProxy-Laptop' -Action $proxyAction -Trigger $trigger -Settings $settings -Principal $principal -Description 'Run MCP shell proxy on 127.0.0.1:8090' -Force | Out-Null
 Start-ScheduledTask -TaskName 'McpShellProxy-Laptop'

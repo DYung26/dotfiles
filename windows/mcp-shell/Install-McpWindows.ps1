@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$RepoRoot = (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent),
+    [string]$McpShellSource,
     [switch]$EnableCloudflared
 )
 $ErrorActionPreference = 'Stop'
@@ -24,10 +25,15 @@ $GoBin = Join-Path $UserHome 'go\bin'
 $McpShellExe = Join-Path $GoBin 'mcp-shell.exe'
 $McpProxyExe = Join-Path $BinDir 'mcp-proxy.exe'
 $CloudflaredExe = Join-Path $BinDir 'cloudflared.exe'
-$McpShellVersion = 'v0.7.2-0.20261011185850-100f9ab7d0b1'
 
 New-Item -ItemType Directory -Force -Path $LocalRoot, $BinDir, $CloudflaredDir, $LogDir | Out-Null
 $RepoRoot = (Resolve-Path $RepoRoot).Path
+if (-not $McpShellSource) {
+    $projectsRoot = Split-Path $RepoRoot -Parent
+    foreach ($candidate in @((Join-Path $projectsRoot 'mcp-shell'), (Join-Path $projectsRoot 'mcp-shell-src'))) {
+        if (Test-Path (Join-Path $candidate 'go.mod')) { $McpShellSource = $candidate; break }
+    }
+}
 function Refresh-UserPath {
     $candidates = @($BinDir, $GoBin, 'C:\Program Files\Go\bin', 'C:\Program Files\Git\bin', 'C:\Program Files\Git\usr\bin')
     $env:Path = (($candidates + $env:Path.Split(';') | Where-Object { $_ -and (Test-Path $_ -or $_ -eq $BinDir) } | Select-Object -Unique) -join ';')
@@ -57,6 +63,19 @@ if (-not (Resolve-CommandPath 'bash.exe')) {
 }
 if (-not (Resolve-CommandPath 'bash.exe')) { throw 'Git for Windows (Git Bash) is required by the legacy shell-execution mode.' }
 
+if (-not $McpShellSource) {
+    $McpShellSource = Join-Path $LocalRoot 'src'
+    if (-not (Test-Path (Join-Path $McpShellSource 'go.mod'))) {
+        $gitExe = Resolve-CommandPath 'git.exe'
+        if (-not $gitExe) { throw 'Git is required to clone https://github.com/DYung26/mcp-shell.git.' }
+        if (Test-Path $McpShellSource) { throw "Source directory exists but is not a Go module: $McpShellSource" }
+        & $gitExe clone https://github.com/DYung26/mcp-shell.git $McpShellSource
+        if ($LASTEXITCODE -ne 0) { throw "Could not clone mcp-shell source (exit $LASTEXITCODE)." }
+    }
+}
+$McpShellSource = (Resolve-Path $McpShellSource).Path
+if (-not (Test-Path (Join-Path $McpShellSource 'go.mod'))) { throw "McpShellSource is not a Go module: $McpShellSource" }
+
 $UvExe = Resolve-CommandPath 'uv.exe'
 if (-not $UvExe) {
     $uvInstall = Invoke-RestMethod 'https://astral.sh/uv/install.ps1'
@@ -71,11 +90,21 @@ if (-not $UvExe) {
 }
 if (-not $UvExe) { throw 'Could not locate uv.exe after installation.' }
 
-& $GoExe install "github.com/sonirico/mcp-shell@$McpShellVersion"
-if ($LASTEXITCODE -ne 0 -or -not (Test-Path $McpShellExe)) { throw "go install mcp-shell failed (exit $LASTEXITCODE)." }
+Push-Location $McpShellSource
+try {
+    & $GoExe build -o $McpShellExe .
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $McpShellExe)) { throw "go build mcp-shell failed (exit $LASTEXITCODE)." }
+} finally {
+    Pop-Location
+}
 if (-not (Test-Path $McpProxyExe)) {
-    & $UvExe tool install --bin-dir $BinDir mcp-proxy
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $McpProxyExe)) { throw "uv tool install mcp-proxy failed (exit $LASTEXITCODE)." }
+    & $UvExe tool install --force mcp-proxy
+    if ($LASTEXITCODE -ne 0) { throw "uv tool install mcp-proxy failed (exit $LASTEXITCODE)." }
+    $uvBinDir = (& $UvExe tool dir --bin).Trim()
+    if ($LASTEXITCODE -ne 0 -or -not $uvBinDir) { throw 'Could not determine uv tool executable directory.' }
+    $uvProxyExe = Join-Path $uvBinDir 'mcp-proxy.exe'
+    if (-not (Test-Path $uvProxyExe)) { throw "uv installed mcp-proxy but executable was not found at $uvProxyExe." }
+    if ($uvProxyExe -ne $McpProxyExe) { Copy-Item -LiteralPath $uvProxyExe -Destination $McpProxyExe -Force }
 }
 if (-not (Test-Path $CloudflaredExe)) {
     Invoke-WebRequest -Uri 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe' -OutFile $CloudflaredExe
@@ -177,7 +206,7 @@ if ($EnableCloudflared) {
 
 & $CloudflaredExe tunnel --config $CloudflaredConfig ingress validate
 if ($LASTEXITCODE -ne 0) { throw 'Cloudflare ingress config validation failed; tunnel task remains disabled.' }
-Write-Host 'mcp-shell and mcp-proxy installed; proxy task starts at user logon.'
+Write-Host "mcp-shell built from $McpShellSource and mcp-proxy installed; proxy task starts at user logon."
 Write-Host "Cloudflare config: $CloudflaredConfig"
 if ($EnableCloudflared) {
     Write-Warning 'Cloudflared is enabled. Ensure Cloudflare Access or another authentication gate protects the shell endpoint.'

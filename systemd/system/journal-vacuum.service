@@ -1,0 +1,7 @@
+[Unit]
+Description=Rotate and cap the system journal
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/journalctl --rotate
+ExecStart=/usr/bin/journalctl --vacuum-size=300M

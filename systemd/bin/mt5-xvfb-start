@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+AUTH="$HOME/.Xauthority-mt5"
+COOKIE="$(/usr/bin/mcookie)"
+/usr/bin/xauth -f "$AUTH" remove :1 >/dev/null 2>&1 || true
+/usr/bin/xauth -f "$AUTH" add :1 . "$COOKIE"
+exec /usr/bin/Xvfb :1 -screen 0 3072x1600x24 -nolisten tcp -auth "$AUTH"

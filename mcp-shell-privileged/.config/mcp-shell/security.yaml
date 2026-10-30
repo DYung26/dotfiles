@@ -11,6 +11,8 @@ security:
   allowed_commands:
     - bash
     - sh
+    - powershell.exe
+    - pwsh
     - git
     - ls
     - cat

@@ -1,0 +1,7 @@
+[Unit]
+Description=Restart all running Docker containers
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c "/usr/bin/docker ps -q | /usr/bin/xargs -r /usr/bin/docker restart"

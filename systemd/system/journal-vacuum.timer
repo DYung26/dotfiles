@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly cap on system journal disk usage
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+Unit=journal-vacuum.service
+
+[Install]
+WantedBy=timers.target

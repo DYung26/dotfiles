@@ -53,11 +53,11 @@ command -v gh >/dev/null || die 'gh CLI is required'
 ghx auth status >/dev/null 2>&1 || die 'selected gh profile is not authenticated'
 ghx repo view "$launcher" --json nameWithOwner >/dev/null || die "cannot access launcher $launcher"
 ghx repo view "$repo" --json nameWithOwner >/dev/null || die "cannot access project repo $repo"
-stamp="$(date -u +%Y%m%dT%H%M%SZ)"; tmp="$(mktemp -d "$TMP_BASE/cs-burst.XXXXXX")"; out_dir="$workdir/artifacts/cs-burst-$stamp"; mkdir -p "$out_dir"; cs_name=''
+stamp="$(date -u +%Y%m%dT%H%M%SZ)-$RANDOM"; tmp="$(mktemp -d "$TMP_BASE/cs-burst.XXXXXX")"; out_dir="$workdir/artifacts/cs-burst-$stamp"; mkdir -p "$out_dir"; cs_name=''
 finish(){ rc=$?; trap - EXIT INT TERM; set +e; if [[ -n "$cs_name" ]]; then ghx codespace stop -c "$cs_name" >/dev/null 2>&1; if ((keep)); then note "keeping stopped worker (storage still bills): $cs_name"; else ghx codespace delete -c "$cs_name" -f >/dev/null 2>&1; fi; fi; rm -rf "$tmp"; note "results: $out_dir"; exit "$rc"; }; trap finish EXIT INT TERM
 archive="$tmp/worktree.tar.gz"; (cd "$workdir" && tar -czf "$archive" --exclude='./.git' --exclude='./node_modules' --exclude='./.venv' --exclude='./venv' --exclude='./.next' --exclude='./dist' --exclude='./build' --exclude='./coverage' --exclude='./.turbo' --exclude='./artifacts' --exclude='./.env' --exclude='./.env.*' --exclude='./.npmrc' --exclude='./.pypirc' --exclude='./.netrc' --exclude='./.git-credentials' --exclude='./.ssh' --exclude='./.devcontainer' --exclude='./.vscode' --exclude='./.idea' .)
 note "creating disposable worker from $launcher"
-display="burst-$stamp-$RANDOM"; ghx codespace create --repo "$launcher" --machine "$machine" --idle-timeout "$idle" --retention-period "$retention" --display-name "$display" >/dev/null
+display="burst-$stamp"; ghx codespace create --repo "$launcher" --machine "$machine" --idle-timeout "$idle" --retention-period "$retention" --display-name "$display" >/dev/null
 for attempt in {1..20}; do cs_name="$(ghx api /user/codespaces --jq ".codespaces[] | select(.display_name == \"$display\") | .name")"; [[ -n "$cs_name" ]] && break; sleep 2; done; [[ -n "$cs_name" ]] || die 'Codespaces created but its name could not be resolved; check gh codespace list'
 printf '%s\n' "$cs_name" > "$out_dir/codespace-name.txt"
 note "waiting for worker SSH to become ready"
@@ -73,7 +73,7 @@ tar -xzf "$HOME/cs-burst-worktree.tar.gz"
 REMOTE
 printf 'set +e\n('
 printf ' %q' "$@"
-printf ' ) 2>&1 | tee command.log\nrc=${PIPESTATUS[0]}\nprintf "%%s\\n" "$rc" > exit-code.txt\ntar -czf "$HOME/cs-burst-results.tar.gz" command.log exit-code.txt\ntar -czf "$HOME/cs-burst-artifacts.tar.gz" --exclude="./.git" --exclude="./node_modules" --exclude="./.env" --exclude="./.env.*" --exclude="./.npmrc" --exclude="./.pypirc" --exclude="./.netrc" --exclude="./.git-credentials" --exclude="./.ssh" . 2>/dev/null || true\nexit "$rc"\n'; } > "$script"
+printf ' ) 2>&1 | tee command.log\nrc=${PIPESTATUS[0]}\nprintf "%%s\\n" "$rc" > exit-code.txt\ntar -czf "$HOME/cs-burst-results.tar.gz" command.log exit-code.txt\ntar -czf "$HOME/cs-burst-artifacts.tar.gz" --exclude="./.git" --exclude="./node_modules" --exclude="./.next" --exclude="./dist" --exclude="./build" --exclude="./.turbo" --exclude="./.cache" --exclude="./.vercel" --exclude="./out" --exclude="./.venv" --exclude="./venv" --exclude="./.env" --exclude="./.env.*" --exclude="./.npmrc" --exclude="./.pypirc" --exclude="./.netrc" --exclude="./.git-credentials" --exclude="./.ssh" . 2>/dev/null || true\nexit "$rc"\n'; } > "$script"
 ghx codespace cp -e -c "$cs_name" "$archive" "remote:cs-burst-worktree.tar.gz"
 ghx codespace cp -e -c "$cs_name" "$script" "remote:cs-burst-command.sh"
 set +e; ghx codespace ssh -c "$cs_name" -- 'bash ~/cs-burst-command.sh'; rc=$?; set -e; printf '%s\n' "$rc" > "$out_dir/local-ssh-exit-code.txt"

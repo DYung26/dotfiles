@@ -298,3 +298,6 @@ cloudflared/.cloudflared/*.rendered
 
 # Local sudo password for mcp-shell service; never commit.
 mcp-shell-privileged/.config/mcp-shell/sudo.env
+
+# Local GitHub CLI authentication state (never commit tokens)
+/gh*/.config/*/hosts.yml

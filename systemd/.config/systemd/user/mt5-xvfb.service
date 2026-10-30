@@ -1,0 +1,12 @@
+[Unit]
+Description=Virtual X display for MetaTrader 5
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/Projects/dotfiles/systemd/bin/mt5-xvfb-start
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

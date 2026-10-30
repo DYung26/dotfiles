@@ -1,0 +1,12 @@
+[Unit]
+Description=Maximize the MetaTrader 5 main window
+Requires=mt5-terminal.service mt5-openbox.service
+After=mt5-terminal.service mt5-openbox.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/Projects/dotfiles/systemd/bin/mt5-maximize-window
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target

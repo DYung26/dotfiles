@@ -1,0 +1,20 @@
+[Unit]
+Description=MetaTrader 5 terminal (Wine)
+Requires=mt5-xvfb.service mt5-openbox.service
+After=mt5-xvfb.service mt5-openbox.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=WINEPREFIX=%h/.local/share/wine-test
+Environment=WINEARCH=win64
+Environment=DISPLAY=:1
+Environment=XAUTHORITY=%h/.Xauthority-mt5
+WorkingDirectory=%h/.local/share/wine-test/drive_c/Program Files/MetaTrader 5
+ExecStart=/usr/bin/wine "%h/.local/share/wine-test/drive_c/Program Files/MetaTrader 5/terminal64.exe"
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,14 @@
+[Unit]
+Description=Expose MT5 MCP endpoints to MetaMCP through Docker host gateway
+Requires=mt5-terminal.service mt5-metaeditor.service
+After=mt5-terminal.service mt5-metaeditor.service
+
+[Service]
+Type=simple
+ExecStartPre=/usr/bin/sh -c "for i in $(/usr/bin/seq 1 60); do /usr/bin/nc -z 127.0.0.1 22345 && /usr/bin/nc -z 127.0.0.1 22346 && exit 0; /usr/bin/sleep 1; done; exit 1"
+ExecStart=/usr/bin/python3 %h/Projects/dotfiles/systemd/bin/mt5-mcp-gateway.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

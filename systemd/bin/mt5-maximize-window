@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+export DISPLAY=:1
+export XAUTHORITY="$HOME/.Xauthority-mt5"
+# Wait for MT5's main window, then maximize it on the virtual desktop.
+for i in $(seq 1 90); do
+  if wmctrl -l | grep -q 'MetaTrader 5'; then
+    wmctrl -r 'MetaTrader 5' -b add,maximized_vert,maximized_horz || true
+    exit 0
+  fi
+  sleep 2
+done
+exit 1

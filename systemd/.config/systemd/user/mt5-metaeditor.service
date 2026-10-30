@@ -1,0 +1,19 @@
+[Unit]
+Description=MetaEditor for MetaTrader 5 MCP endpoint
+Requires=mt5-xvfb.service mt5-openbox.service
+After=mt5-xvfb.service mt5-openbox.service mt5-terminal.service
+
+[Service]
+Type=simple
+Environment=WINEPREFIX=%h/.local/share/wine-test
+Environment=WINEARCH=win64
+Environment=DISPLAY=:1
+Environment=XAUTHORITY=%h/.Xauthority-mt5
+WorkingDirectory=%h/.local/share/wine-test/drive_c/Program Files/MetaTrader 5
+Restart=on-failure
+RestartSec=10
+
+ExecStart=/usr/bin/wine "%h/.local/share/wine-test/drive_c/Program Files/MetaTrader 5/MetaEditor64.exe"
+
+[Install]
+WantedBy=default.target

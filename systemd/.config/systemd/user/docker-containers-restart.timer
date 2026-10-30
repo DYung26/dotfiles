@@ -1,0 +1,10 @@
+[Unit]
+Description=Restart all running Docker containers hourly
+
+[Timer]
+OnActiveSec=1h
+OnUnitActiveSec=1h
+Unit=docker-containers-restart.service
+
+[Install]
+WantedBy=timers.target

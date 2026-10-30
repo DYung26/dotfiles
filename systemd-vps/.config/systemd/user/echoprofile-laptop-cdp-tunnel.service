@@ -1,0 +1,13 @@
+[Unit]
+Description=Secure SSH tunnel to laptop EchoProfile Chromium CDP
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ssh -N -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 127.0.0.1:9224:127.0.0.1:9222 dyung26@100.98.45.0
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

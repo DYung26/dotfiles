@@ -1,0 +1,15 @@
+[Unit]
+Description=Tailnet-only VNC access to the MetaTrader 5 display
+Requires=mt5-xvfb.service
+After=mt5-xvfb.service
+
+[Service]
+Type=simple
+Environment=XAUTHORITY=%h/.Xauthority-mt5
+ExecStartPre=/usr/bin/xdpyinfo -display :1
+ExecStart=/usr/bin/x11vnc -noipv6 -display :1 -auth %h/.Xauthority-mt5 -listen 100.82.234.105 -rfbport 5900 -rfbauth %h/.vnc/mt5-vnc.pass -forever -shared -noxdamage -modtweak -xkb
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

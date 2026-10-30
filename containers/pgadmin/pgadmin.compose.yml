@@ -2,12 +2,14 @@ services:
   pgadmin4:
     image: dpage/pgadmin4:9.13.0
     container_name: pgadmin4
+    # Keep Docker's listener on loopback; Tailscale Serve exposes it to the tailnet only.
     ports:
-      - "5050:80"
+      - "127.0.0.1:5050:80"
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
-      PGADMIN_CONFIG_MAX_LOGIN_ATTEMPTS: ${PGADMIN_CONFIG_MAX_LOGIN_ATTEMPTS}
+      PGADMIN_CONFIG_MAX_LOGIN_ATTEMPTS: ${PGADMIN_CONFIG_MAX_LOGIN_ATTEMPTS:-0}
+      PGADMIN_LISTEN_PORT: 80
     restart: unless-stopped
     volumes:
       - pgadmin_data:/var/lib/pgadmin
@@ -15,7 +17,10 @@ services:
 volumes:
   pgadmin_data:
 
-# docker compose --env-file .env.pgadmin -f containers/pgadmin/pgadmin.compose.yml up -d
+# From the dotfiles repository root:
+# docker compose --env-file containers/pgadmin/.env.pgadmin -f containers/pgadmin/pgadmin.compose.yml up -d
+# Access locally with: http://127.0.0.1:5050
+# Remote access: ssh -L 5050:127.0.0.1:5050 <vps-user>@<vps-host>
 
 # recreate from scratch and wipe pgAdmin data
 # docker compose down -v

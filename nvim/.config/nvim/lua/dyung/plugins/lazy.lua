@@ -99,17 +99,53 @@ require("lazy").setup({
     "iamcco/markdown-preview.nvim",
     build = function()
       vim.fn["mkdp#util#install"]()
+      local patch = vim.fn.stdpath("config") .. "/scripts/patch-markdown-preview.py"
+      local plugin = vim.fn.stdpath("data") .. "/lazy/markdown-preview.nvim"
+      local output = vim.fn.system({ "python3", patch, plugin })
+      if vim.v.shell_error ~= 0 then
+        error("Failed to apply markdown-preview.nvim compatibility patches: " .. vim.fn.trim(output))
+      end
     end,
     ft = { "markdown" },
+    init = function()
+      -- Keep the preview bound to localhost; Tailscale Serve exposes it privately.
+      vim.g.mkdp_auto_start = 0
+      vim.g.mkdp_auto_close = 0
+      vim.g.mkdp_refresh_slow = 0
+      vim.g.mkdp_open_to_the_world = 0
+      vim.g.mkdp_open_ip = "localhost"
+      vim.g.mkdp_port = 8765
+      vim.g.mkdp_echo_preview_url = 0
+      vim.g.mkdp_combine_preview = 1
+      vim.g.mkdp_combine_preview_auto_refresh = 1
+      vim.g.mkdp_preview_options = {
+        disable_sync_scroll = 0,
+        sync_scroll_type = "middle",
+        hide_yaml_meta = 1,
+        content_editable = false,
+        disable_filename = 0,
+        toc = {},
+        maid = { theme = "neutral" },
+        katex = {},
+        uml = {},
+        sequence_diagrams = {},
+        flowchart_diagrams = {},
+      }
+      vim.cmd([[
+        function! MkdpRemoteOpen(url) abort
+          let l:url = substitute(a:url, '^http://[^:]*:[0-9]*', 'https://ubuntu-s-1vcpu-1gb-sfo3-01.tail2e27e5.ts.net:8443', '')
+          echom 'Markdown preview (open on your device): ' . l:url
+        endfunction
+      ]])
+      vim.g.mkdp_browserfunc = "MkdpRemoteOpen"
+    end,
   },
 
   {
-    "MeanderingProgrammer/render-markdown.nvim",
-    dependencies = {
-      "nvim-tree/nvim-web-devicons",
-    },
+    "OXY2DEV/markview.nvim",
+    lazy = false,
     config = function()
-      require("dyung.plugins.markdown")
+      require("markview").setup({})
     end,
   },
 

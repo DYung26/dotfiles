@@ -1,0 +1,14 @@
+[Unit]
+Description=Playwright MCP Server attached to laptop EchoProfile Chromium
+Requires=echoprofile-laptop-cdp-tunnel.service
+After=echoprofile-laptop-cdp-tunnel.service
+
+[Service]
+Type=simple
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:%h/go/bin:%h/.cargo/bin
+ExecStart=%h/Projects/dotfiles/systemd/bin/nvm-exec npx @playwright/mcp@latest --cdp-endpoint=http://127.0.0.1:9224 --port=8932 --host=172.17.0.1 --allowed-hosts=host.docker.internal,172.17.0.1:8932,host.docker.internal:8932
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

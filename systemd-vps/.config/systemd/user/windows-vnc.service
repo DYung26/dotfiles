@@ -1,0 +1,15 @@
+[Unit]
+Description=Tailnet VNC on port 5902 for the EchoProfile browser desktop
+Requires=echoprofile.service
+After=echoprofile.service
+
+[Service]
+Type=simple
+Environment=DISPLAY=:2
+ExecStartPre=/usr/bin/xdpyinfo -display :2
+ExecStart=/usr/bin/x11vnc -noipv6 -display :2 -listen 100.82.234.105 -rfbport 5902 -rfbauth %h/.vnc/mt5-vnc.pass -forever -shared -noxdamage -modtweak -xkb
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

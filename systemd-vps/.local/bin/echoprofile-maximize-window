@@ -9,7 +9,7 @@ for i in $(seq 1 90); do
     sleep 1
     geometry="$(wmctrl -lG | grep -F "$wid" || true)"
     echo "$geometry"
-    echo "$geometry" | grep -q "3072 1600" && exit 0
+    echo "$geometry" | grep -q "1600 900" && exit 0
   fi
   sleep 2
 done

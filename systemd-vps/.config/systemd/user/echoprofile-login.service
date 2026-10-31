@@ -1,0 +1,15 @@
+[Unit]
+Description=Open the persistent EchoProfile Chromium session at VPS startup
+Requires=echoprofile.service echoprofile-wm.service echoprofile-vnc.service
+After=network-online.target echoprofile.service echoprofile-wm.service echoprofile-vnc.service
+
+[Service]
+Type=oneshot
+Environment=DISPLAY=:2
+ExecStartPre=/usr/bin/curl --fail --silent --show-error --retry 60 --retry-connrefused --retry-delay 1 http://127.0.0.1:8756/health
+ExecStart=%h/.local/bin/echoprofile login
+TimeoutStartSec=180
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target

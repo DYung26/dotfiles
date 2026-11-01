@@ -1,0 +1,25 @@
+[Unit]
+Description=GridWatch power availability API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dyung
+Group=dyung
+WorkingDirectory=/home/dyung/Projects/gridwatch
+Environment=NODE_ENV=production
+EnvironmentFile=/home/dyung/Projects/gridwatch/.env
+ExecStart=/home/dyung/.nvm/versions/node/v24.21.0/bin/node /home/dyung/Projects/gridwatch/dist/cli.js server
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=false
+ReadWritePaths=/home/dyung/Projects/gridwatch/.gridwatch
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

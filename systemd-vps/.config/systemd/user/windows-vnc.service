@@ -1,13 +1,13 @@
 [Unit]
-Description=Tailnet VNC on port 5902 for the EchoProfile browser desktop
-Requires=echoprofile.service
-After=echoprofile.service
+Description=TigerVNC virtual desktop for the EchoProfile browser
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=simple
 Environment=DISPLAY=:2
-ExecStartPre=/usr/bin/xdpyinfo -display :2
-ExecStart=/usr/bin/x11vnc -noipv6 -display :2 -listen 100.82.234.105 -rfbport 5902 -rfbauth %h/.vnc/mt5-vnc.pass -forever -shared -noxdamage -modtweak -xkb
+ExecStartPre=/usr/bin/bash -c "for i in {1..30}; do /usr/sbin/ip -4 addr show | /usr/bin/grep -q 100.82.234.105 && exit 0; sleep 1; done; exit 1"
+ExecStart=/usr/bin/Xtigervnc :2 -geometry 1536x864 -depth 24 -interface 100.82.234.105 -rfbport 5902 -rfbauth %h/.vnc/mt5-vnc.pass -SecurityTypes VncAuth -AcceptSetDesktopSize=1 -AlwaysShared -UseIPv4=1 -UseIPv6=0 -nolisten tcp -ac
 Restart=on-failure
 RestartSec=3
 

@@ -6,7 +6,8 @@ After=network-online.target echoprofile.service echoprofile-wm.service echoprofi
 [Service]
 Type=oneshot
 Environment=DISPLAY=:2
-ExecStartPre=/usr/bin/curl --fail --silent --show-error --retry 60 --retry-connrefused --retry-delay 1 http://127.0.0.1:8756/health
+Environment=ECHOPROFILE_HOST=100.82.234.105
+ExecStartPre=/usr/bin/curl --fail --silent --show-error --retry 60 --retry-connrefused --retry-delay 1 http://100.82.234.105:8756/health
 ExecStart=%h/.local/bin/echoprofile login
 TimeoutStartSec=180
 RemainAfterExit=yes

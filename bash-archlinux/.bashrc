@@ -260,3 +260,6 @@ rmtmp() {
 
 # opencode
 export PATH=/home/dyung/.opencode/bin:$PATH
+
+# Prefer Arch, then laptop, then VPS for EchoProfile when this primary device is unavailable.
+export ECHOPROFILE_AUTO_FALLBACK=true

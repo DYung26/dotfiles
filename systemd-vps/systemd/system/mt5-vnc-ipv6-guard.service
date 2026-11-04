@@ -1,0 +1,13 @@
+[Unit]
+Description=Block unintended IPv6 access to the MT5 VNC listener on port 5900
+Documentation=man:ip6tables(8)
+Wants=network-online.target
+After=network-online.target tailscaled.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c '/usr/sbin/ip6tables -C INPUT -p tcp --dport 5900 -j DROP 2>/dev/null || /usr/sbin/ip6tables -I INPUT 1 -p tcp --dport 5900 -j DROP'
+
+[Install]
+WantedBy=multi-user.target

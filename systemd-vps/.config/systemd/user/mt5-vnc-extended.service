@@ -1,0 +1,17 @@
+[Unit]
+Description=Second VNC view of MetaTrader 5 at the EchoProfile Windows resolution
+Requires=mt5-xvfb.service
+After=mt5-xvfb.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:1
+Environment=XAUTHORITY=%h/.Xauthority-mt5
+ExecStartPre=/usr/bin/bash -lc 'for attempt in {1..30}; do DISPLAY=:1 XAUTHORITY=%h/.Xauthority-mt5 /usr/bin/xdpyinfo >/dev/null 2>&1 && /usr/sbin/ip -4 addr show | /usr/bin/grep -q 100.82.234.105 && exit 0; /usr/bin/sleep 1; done; exit 1'
+ExecStart=/usr/bin/x11vnc -display :1 -auth %h/.Xauthority-mt5 -listen 100.82.234.105 -rfbport 5903 -rfbportv6 0 -rfbauth %h/.vnc/mt5-vnc.pass -forever -shared -noxdamage -modtweak -xkb -scale 1536x864
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

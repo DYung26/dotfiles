@@ -1,8 +1,9 @@
 [Unit]
 Description=Block unintended IPv6 access to the MT5 VNC listener on port 5900
 Documentation=man:ip6tables(8)
-Wants=network-online.target
-After=network-online.target tailscaled.service
+Wants=network-online.target netfilter-persistent.service
+After=network-online.target netfilter-persistent.service tailscaled.service
+PartOf=netfilter-persistent.service
 
 [Service]
 Type=oneshot

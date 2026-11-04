@@ -10,6 +10,10 @@ note(){ printf 'cs-burst: %s\n' "$*" >&2; }
 usage(){ cat <<'EOF'
 Usage:
   cs-burst run --repo OWNER/REPO [--account gh-26|gh-06|gh-df|gh-odo|gh-do] [--workdir PATH] [--machine NAME] -- COMMAND [ARG...]
+  cs-burst exec --codespace NAME [--output FILE] [--account ALIAS] -- COMMAND [ARG...]
+  cs-burst cp --codespace NAME [--account ALIAS] [--recursive] SOURCE DESTINATION
+  cs-burst stop --codespace NAME [--account ALIAS]
+  cs-burst delete --codespace NAME [--account ALIAS]
   cs-burst status [--account ALIAS]
   cs-burst accounts
 
@@ -24,7 +28,8 @@ Options: --repo OWNER/REPO (required), --account ALIAS, --launcher OWNER/REPO,
 --machine NAME, --idle-timeout DURATION, --retention DURATION, --workdir PATH,
 --include PATH (repeatable; explicitly adds an excluded path),
 --allow-sensitive-snapshot (required for env/credential/key paths),
---keep (debug only; worker is stopped, storage still bills),
+--keep (stop but retain the Codespace for debugging),
+--keep-running (leave the Codespace running for a temporary test environment),
 --no-artifacts, --dry-run.
 
 Snapshot defaults exclude credentials, dependency directories, generated output,
@@ -32,6 +37,11 @@ artifacts and editor metadata. --include adds exact paths from --workdir, includ
 otherwise-excluded paths; .git metadata is never included. Sensitive paths require
 --allow-sensitive-snapshot; contents are transferred to the Codespace and are
 visible to the remote command.
+
+Use exec/cp/stop/delete to inspect and manage an existing Codespace. These commands
+never create a worker or delete one unless delete is explicitly requested.
+--keep-running is for temporary test environments only; Codespaces remain subject
+to idle timeout and the 12-hour maximum lifetime.
 EOF
 }
 set_account(){ case "${1:-}" in gh-26|gh-06|gh-df|gh-odo|gh-do) export CS_BURST_ACCOUNT="$1";; *) die "unknown account alias '$1'";; esac; }
@@ -47,12 +57,43 @@ case "$cmd" in
  help|-h|--help) usage; exit 0;;
  accounts) for a in gh-26 gh-06 gh-df gh-odo gh-do; do echo "[$a]"; (CS_BURST_ACCOUNT="$a"; export CS_BURST_ACCOUNT; ghx auth status 2>&1 | sed -n '1,6p') || true; done; exit 0;;
  status) while (($#)); do case "$1" in --account) shift; set_account "${1:-}"; shift;; *) die "unknown status option $1";; esac; done; ghx codespace list --json name,repository,state,machineName,createdAt,lastUsedAt,displayName,gitStatus,owner; exit $?;;
+ exec)
+   codespace=''; output=''
+   while (($#)); do case "$1" in --codespace|-c) codespace="${2:?missing Codespace name}"; shift 2;; --account) shift; set_account "${1:-}"; shift;; --output|-o) output="${2:?missing output path}"; shift 2;; --) shift; break;; *) die "unknown exec option '$1'";; esac; done
+   [[ -n "$codespace" ]] || die 'exec requires --codespace NAME'
+   (($#)) || die 'remote command is required after --'
+   command -v gh >/dev/null || die 'gh CLI is required'
+   ghx auth status >/dev/null 2>&1 || die 'selected gh profile is not authenticated'
+   if [[ -n "$output" ]]; then
+     mkdir -p "$(dirname -- "$output")"
+     set +e; ghx codespace ssh -c "$codespace" -- "$@" 2>&1 | tee "$output"; rc=${PIPESTATUS[0]}; set -e
+     exit "$rc"
+   fi
+   ghx codespace ssh -c "$codespace" -- "$@"; exit $?;;
+ cp)
+   codespace=''; recursive=0
+   while (($#)); do case "$1" in --codespace|-c) codespace="${2:?missing Codespace name}"; shift 2;; --account) shift; set_account "${1:-}"; shift;; --recursive|-r) recursive=1; shift;; --) shift; break;; *) break;; esac; done
+   [[ -n "$codespace" ]] || die 'cp requires --codespace NAME'
+   (($# == 2)) || die 'cp requires SOURCE and DESTINATION; prefix the remote side with remote:'
+   [[ "$1" == remote:* || "$2" == remote:* ]] || die 'one cp path must use the remote: prefix'
+   command -v gh >/dev/null || die 'gh CLI is required'
+   ghx auth status >/dev/null 2>&1 || die 'selected gh profile is not authenticated'
+   if ((recursive)); then ghx codespace cp -r -c "$codespace" "$1" "$2"; else ghx codespace cp -c "$codespace" "$1" "$2"; fi; exit $?;;
+ stop|delete)
+   action="$cmd"; codespace=''
+   while (($#)); do case "$1" in --codespace|-c) codespace="${2:?missing Codespace name}"; shift 2;; --account) shift; set_account "${1:-}"; shift;; *) die "unknown $action option '$1'";; esac; done
+   [[ -n "$codespace" ]] || die "$action requires --codespace NAME"
+   command -v gh >/dev/null || die 'gh CLI is required'
+   ghx auth status >/dev/null 2>&1 || die 'selected gh profile is not authenticated'
+   if [[ "$action" == stop ]]; then ghx codespace stop -c "$codespace"; else ghx codespace delete -c "$codespace" -f; fi; exit $?;;
  run) ;;
  *) die "unknown command '$cmd'";; esac
-repo=''; launcher="$DEFAULT_REPO"; machine="$DEFAULT_MACHINE"; idle="$DEFAULT_IDLE"; retention="$DEFAULT_RETENTION"; workdir="$PWD"; keep=0; no_artifacts=0; dry=0; allow_sensitive=0; includes=()
+repo=''; launcher="$DEFAULT_REPO"; machine="$DEFAULT_MACHINE"; idle="$DEFAULT_IDLE"; retention="$DEFAULT_RETENTION"; workdir="$PWD"; keep=0; no_artifacts=0; dry=0; allow_sensitive=0; keep_running=0; idle_explicit=0; includes=()
 while (($#)); do case "$1" in
- --repo) repo="${2:?missing repo}"; shift 2;; --launcher) launcher="${2:?missing launcher}"; shift 2;; --machine) machine="${2:?missing machine}"; shift 2;; --idle-timeout) idle="${2:?missing timeout}"; shift 2;; --retention) retention="${2:?missing retention}"; shift 2;; --workdir) workdir="${2:?missing workdir}"; shift 2;; --include) includes+=("${2:?missing include path}"); shift 2;; --allow-sensitive-snapshot) allow_sensitive=1; shift;; --account) shift; set_account "${1:-}"; shift;; --keep) keep=1; shift;; --no-artifacts) no_artifacts=1; shift;; --dry-run) dry=1; shift;; --) shift; break;; *) die "unknown option '$1'; put command after --";; esac; done
-(($#)) || die 'remote command is required after --'
+ --repo) repo="${2:?missing repo}"; shift 2;; --launcher) launcher="${2:?missing launcher}"; shift 2;; --machine) machine="${2:?missing machine}"; shift 2;; --idle-timeout) idle="${2:?missing timeout}"; idle_explicit=1; shift 2;; --retention) retention="${2:?missing retention}"; shift 2;; --workdir) workdir="${2:?missing workdir}"; shift 2;; --include) includes+=("${2:?missing include path}"); shift 2;; --allow-sensitive-snapshot) allow_sensitive=1; shift;; --keep-running) keep_running=1; shift;; --account) shift; set_account "${1:-}"; shift;; --keep) keep=1; shift;; --no-artifacts) no_artifacts=1; shift;; --dry-run) dry=1; shift;; --) shift; break;; *) die "unknown option '$1'; put command after --";; esac; done
+ ((keep == 0 || keep_running == 0)) || die '--keep and --keep-running cannot be used together'
+ if ((keep_running && !idle_explicit)); then idle=4h; fi
+ (($#)) || die 'remote command is required after --'
 [[ "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || die '--repo must be OWNER/REPO'
 [[ "$launcher" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || die '--launcher must be OWNER/REPO'
 [[ -d "$workdir" ]] || die "workdir missing: $workdir"
@@ -63,10 +104,10 @@ ghx auth status >/dev/null 2>&1 || die 'selected gh profile is not authenticated
 ghx repo view "$launcher" --json nameWithOwner >/dev/null || die "cannot access launcher $launcher"
 ghx repo view "$repo" --json nameWithOwner >/dev/null || die "cannot access project repo $repo"
 stamp="$(date -u +%Y%m%dT%H%M%SZ)-$RANDOM"; tmp="$(mktemp -d "$TMP_BASE/cs-burst.XXXXXX")"; out_dir="$workdir/artifacts/cs-burst-$stamp"; mkdir -p "$out_dir"; cs_name=''
-finish(){ rc=$?; trap - EXIT INT TERM; set +e; if [[ -n "$cs_name" ]]; then ghx codespace stop -c "$cs_name" >/dev/null 2>&1; if ((keep)); then note "keeping stopped worker (storage still bills): $cs_name"; else ghx codespace delete -c "$cs_name" -f >/dev/null 2>&1; fi; fi; rm -rf "$tmp"; note "results: $out_dir"; exit "$rc"; }; trap finish EXIT INT TERM
+finish(){ rc=$?; trap - EXIT INT TERM; set +e; if [[ -n "$cs_name" ]]; then if ((keep_running)); then note "leaving Codespace running for temporary test use: $cs_name"; elif ((keep)); then ghx codespace stop -c "$cs_name" >/dev/null 2>&1; note "keeping stopped worker (storage still bills): $cs_name"; else ghx codespace stop -c "$cs_name" >/dev/null 2>&1; ghx codespace delete -c "$cs_name" -f >/dev/null 2>&1; fi; fi; rm -rf "$tmp"; note "results: $out_dir"; exit "$rc"; }; trap finish EXIT INT TERM
 archive="$tmp/worktree.tar.gz"; snapshot="$tmp/snapshot"; mkdir -p "$snapshot"
 # Build the normal safe snapshot first, then overlay only explicitly selected paths.
-(cd "$workdir" && tar -czf "$archive" --exclude='./.git' --exclude='./node_modules' --exclude='*/node_modules' --exclude='./.venv' --exclude='*/.venv' --exclude='./venv' --exclude='*/venv' --exclude='./.next' --exclude='*/.next' --exclude='./dist' --exclude='*/dist' --exclude='./build' --exclude='*/build' --exclude='./coverage' --exclude='*/coverage' --exclude='./.turbo' --exclude='*/.turbo' --exclude='./artifacts' --exclude='./.env' --exclude='./.env.*' --exclude='*/.env' --exclude='*/.env.*' --exclude='./.npmrc' --exclude='*/.npmrc' --exclude='./.pypirc' --exclude='*/.pypirc' --exclude='./.netrc' --exclude='*/.netrc' --exclude='./.git-credentials' --exclude='*/.git-credentials' --exclude='./.ssh' --exclude='*/.ssh' --exclude='*/id_rsa' --exclude='*/id_ed25519' --exclude='*.pem' --exclude='*.key' --exclude='./.devcontainer' --exclude='./.vscode' --exclude='./.idea' .)
+(cd "$workdir" && tar -czf "$archive" --exclude='./.git' --exclude='./node_modules' --exclude='*/node_modules' --exclude='./.venv' --exclude='*/.venv' --exclude='./venv' --exclude='*/venv' --exclude='./.next' --exclude='*/.next' --exclude='./dist' --exclude='*/dist' --exclude='./build' --exclude='*/build' --exclude='./coverage' --exclude='*/coverage' --exclude='./.turbo' --exclude='*/.turbo' --exclude='./artifacts' --exclude='*/artifacts' --exclude='./.env' --exclude='./.env.*' --exclude='*/.env' --exclude='*/.env.*' --exclude='./.npmrc' --exclude='*/.npmrc' --exclude='./.pypirc' --exclude='*/.pypirc' --exclude='./.netrc' --exclude='*/.netrc' --exclude='./.git-credentials' --exclude='*/.git-credentials' --exclude='./.ssh' --exclude='*/.ssh' --exclude='./id_rsa' --exclude='*/id_rsa' --exclude='./id_ed25519' --exclude='*/id_ed25519' --exclude='*.pem' --exclude='*.key' --exclude='*.p12' --exclude='*.pfx' --exclude='./.aws' --exclude='*/.aws' --exclude='./.azure' --exclude='*/.azure' --exclude='./.kube' --exclude='*/.kube' --exclude='./.docker/config.json' --exclude='*/.docker/config.json' --exclude='./.devcontainer' --exclude='*/.devcontainer' --exclude='./.vscode' --exclude='*/.vscode' --exclude='./.idea' --exclude='*/.idea' .)
 tar -xzf "$archive" -C "$snapshot"
 : > "$out_dir/snapshot-includes.txt"
 for include in "${includes[@]}"; do
@@ -111,7 +152,7 @@ tar -xzf "$HOME/cs-burst-worktree.tar.gz"
 REMOTE
 printf 'set +e\n('
 printf ' %q' "$@"
-printf ' ) 2>&1 | tee command.log\nrc=${PIPESTATUS[0]}\nprintf "%%s\\n" "$rc" > exit-code.txt\ntar -czf "$HOME/cs-burst-results.tar.gz" command.log exit-code.txt\ntar -czf "$HOME/cs-burst-artifacts.tar.gz" --exclude="./.git" --exclude="./node_modules" --exclude="*/node_modules" --exclude="./.next" --exclude="*/.next" --exclude="./dist" --exclude="*/dist" --exclude="./build" --exclude="*/build" --exclude="./.turbo" --exclude="*/.turbo" --exclude="./.cache" --exclude="*/.cache" --exclude="./.vercel" --exclude="*/.vercel" --exclude="./out" --exclude="*/out" --exclude="./.venv" --exclude="*/.venv" --exclude="./venv" --exclude="*/venv" --exclude="./.env" --exclude="./.env.*" --exclude="*/.env" --exclude="*/.env.*" --exclude="./.npmrc" --exclude="*/.npmrc" --exclude="./.pypirc" --exclude="*/.pypirc" --exclude="./.netrc" --exclude="*/.netrc" --exclude="./.git-credentials" --exclude="*/.git-credentials" --exclude="./.ssh" --exclude="*/.ssh" --exclude="*/id_rsa" --exclude="*/id_ed25519" --exclude="*.pem" --exclude="*.key" . 2>/dev/null || true\nexit "$rc"\n'; } > "$script"
+printf ' ) 2>&1 | tee command.log\nrc=${PIPESTATUS[0]}\nprintf "%%s\\n" "$rc" > exit-code.txt\ntar -czf "$HOME/cs-burst-results.tar.gz" command.log exit-code.txt\ntar -czf "$HOME/cs-burst-artifacts.tar.gz" --exclude="./.git" --exclude="./node_modules" --exclude="*/node_modules" --exclude="./.next" --exclude="*/.next" --exclude="./dist" --exclude="*/dist" --exclude="./build" --exclude="*/build" --exclude="./.turbo" --exclude="*/.turbo" --exclude="./.cache" --exclude="*/.cache" --exclude="./.vercel" --exclude="*/.vercel" --exclude="./out" --exclude="*/out" --exclude="./.venv" --exclude="*/.venv" --exclude="./venv" --exclude="*/venv" --exclude="./.env" --exclude="./.env.*" --exclude="*/.env" --exclude="*/.env.*" --exclude="./.npmrc" --exclude="*/.npmrc" --exclude="./.pypirc" --exclude="*/.pypirc" --exclude="./.netrc" --exclude="*/.netrc" --exclude="./.git-credentials" --exclude="*/.git-credentials" --exclude="./.ssh" --exclude="*/.ssh" --exclude="./id_rsa" --exclude="*/id_rsa" --exclude="./id_ed25519" --exclude="*/id_ed25519" --exclude="*.pem" --exclude="*.key" --exclude="*.p12" --exclude="*.pfx" --exclude="./.aws" --exclude="*/.aws" --exclude="./.azure" --exclude="*/.azure" --exclude="./.kube" --exclude="*/.kube" --exclude="./.docker/config.json" --exclude="*/.docker/config.json" . 2>/dev/null || true\nexit "$rc"\n'; } > "$script"
 ghx codespace cp -e -c "$cs_name" "$archive" "remote:cs-burst-worktree.tar.gz"
 ghx codespace cp -e -c "$cs_name" "$script" "remote:cs-burst-command.sh"
 set +e; ghx codespace ssh -c "$cs_name" -- 'bash ~/cs-burst-command.sh'; rc=$?; set -e; printf '%s\n' "$rc" > "$out_dir/local-ssh-exit-code.txt"

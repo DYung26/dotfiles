@@ -15,6 +15,7 @@ Usage:
   cs-burst stop --codespace NAME [--account ALIAS]
   cs-burst delete --codespace NAME [--account ALIAS]
   cs-burst status [--account ALIAS]
+  cs-burst tunnel connect|expose|status|disconnect [OPTIONS]
   cs-burst accounts
 
 Creates a disposable Codespace from a minimal launcher, transfers a sanitized
@@ -38,8 +39,9 @@ otherwise-excluded paths; .git metadata is never included. Sensitive paths requi
 --allow-sensitive-snapshot; contents are transferred to the Codespace and are
 visible to the remote command.
 
-Use exec/cp/stop/delete to inspect and manage an existing Codespace. These commands
-never create a worker or delete one unless delete is explicitly requested.
+Use exec/cp/stop/delete to inspect and manage an existing Codespace. Use tunnel
+connect/expose/status/disconnect to bridge two Codespaces through this host and
+optionally publish both host loopback forwards to the tailnet.
 --keep-running is for temporary test environments only; Codespaces remain subject
 to idle timeout and the 12-hour maximum lifetime.
 EOF
@@ -52,10 +54,172 @@ ghx(){ case "${CS_BURST_ACCOUNT:-}" in
   gh-df) GH_CONFIG_DIR="$HOME/.config/gh-dyungfirm" command gh "$@";;
   gh-odo) GH_CONFIG_DIR="$HOME/.config/gh-oyedanolu" command gh "$@";;
   gh-do) GH_CONFIG_DIR="$HOME/.config/gh-danieloyekunle" command gh "$@";; *) die 'invalid account';; esac; }
+tunnel_usage(){ cat <<'EOF'
+Usage:
+  cs-burst tunnel connect --backend-codespace NAME --frontend-codespace NAME [--name PROFILE]
+  cs-burst tunnel expose [--name PROFILE] [--frontend-https-port PORT] [--backend-https-port PORT]
+  cs-burst tunnel status [--name PROFILE]
+  cs-burst tunnel disconnect [--name PROFILE]
+Defaults: remote ports backend=5550/frontend=5000; host loopback ports backend=15550/frontend=15000; HTTPS ports frontend=10443/backend=11443.
+EOF
+}
+tunnel_root(){ if [[ -n "${XDG_STATE_HOME:-}" ]]; then printf '%s/cs-burst/tunnels' "$XDG_STATE_HOME"; else printf '%s/.local/state/cs-burst/tunnels' "$HOME"; fi; }
+tunnel_free(){ ! ss -H -ltn "sport = :$1" 2>/dev/null | grep -q .; }
+tunnel_alive(){ [[ -n "$1" ]] && kill -0 "$1" 2>/dev/null; }
+tunnel_pid_owned(){
+  local p="$1" config="$2" stat args
+  tunnel_alive "$p" || return 1
+  stat="$(ps -p "$p" -o stat= 2>/dev/null || true)"
+  [[ -n "$stat" && "$stat" != Z* ]] || return 1
+  args="$(ps -p "$p" -o args= 2>/dev/null || true)"
+  [[ "$args" == *"ssh -F $config -N"* ]]
+}
+tunnel_load(){ [[ -f "$1/state.env" ]] || die "unknown tunnel profile: $1"; source "$1/state.env"; }
+tunnel_key(){
+  local key
+  for key in "$HOME"/.ssh/id_ed25519 "$HOME"/.ssh/id_rsa "$HOME"/.ssh/id_ecdsa; do
+    if [[ -f "$key" ]] && ssh-keygen -y -P '' -f "$key" >/dev/null 2>&1; then printf '%s' "$key"; return; fi
+  done
+  die 'no usable SSH private key found in the home SSH directory'
+}
+tunnel_ghdir(){
+  case "${CS_BURST_ACCOUNT:-}" in
+    ''|gh-26) printf '%s' "$HOME/.config/gh";;
+    gh-06) printf '%s' "$HOME/.config/gh-dyung06";;
+    gh-df) printf '%s' "$HOME/.config/gh-dyungfirm";;
+    gh-odo) printf '%s' "$HOME/.config/gh-oyedanolu";;
+    gh-do) printf '%s' "$HOME/.config/gh-danieloyekunle";;
+    *) die 'invalid GitHub account profile';;
+  esac
+}
+tunnel_alias(){ awk -v n="$2" '/^Host /{h=$2} /ProxyCommand/ && index($0,n){print h;exit}' "$1"; }
+tunnel_spawn(){ local log="$1" pid="$2"; shift 2; nohup "$@" >"$log" 2>&1 </dev/null & echo "$!" >"$pid"; }
+tunnel_connect(){
+  local profile=vazzel backend= frontend= bp=5550 fp=5000 bhp=15550 fhp=15000
+  local state key cfg ba fa ghdir ready=0 opt
+  while (($#)); do
+    opt="$1"; shift
+    case "$opt" in
+      --name) profile="$1"; shift;;
+      --backend-codespace) backend="$1"; shift;;
+      --frontend-codespace) frontend="$1"; shift;;
+      --backend-port) bp="$1"; shift;;
+      --frontend-port) fp="$1"; shift;;
+      --backend-host-port) bhp="$1"; shift;;
+      --frontend-host-port) fhp="$1"; shift;;
+      --account) set_account "$1"; shift;;
+      *) die "unknown tunnel connect option: $opt";;
+    esac
+  done
+  [[ "$profile" =~ ^[A-Za-z0-9_.-]+$ && -n "$backend" && -n "$frontend" && "$backend" != "$frontend" ]] || die 'connect requires a valid profile and distinct Codespace names'
+  for p in "$bp" "$fp" "$bhp" "$fhp"; do [[ "$p" =~ ^[0-9]+$ ]] && ((p>0 && p<65536)) || die "invalid port: $p"; done
+  state="$(tunnel_root)/$profile"; [[ ! -e "$state" ]] || die 'profile exists; inspect or disconnect it first'
+  ghx auth status >/dev/null 2>&1 || die 'GitHub CLI profile is not authenticated'
+  key="$(tunnel_key)"
+  note "validating backend Codespace $backend"
+  ghx codespace ssh -c "$backend" -- -i "$key" true || die 'backend SSH validation failed'
+  note "validating frontend Codespace $frontend"
+  ghx codespace ssh -c "$frontend" -- -i "$key" true || die 'frontend SSH validation failed'
+  tunnel_free "$bhp" && tunnel_free "$fhp" || die 'one or both host ports are occupied'
+  mkdir -p "$state"; cfg="$state/ssh_config"
+  ghx codespace ssh --config >"$cfg" 2>"$state/ssh-config.stderr" || true; chmod 600 "$cfg"
+  sed -i "s#${HOME}/.ssh/codespaces.auto#$key#g" "$cfg"
+  ghdir="$(tunnel_ghdir)"
+  if [[ "$ghdir" != "$HOME/.config/gh" ]]; then sed -i "s#/usr/bin/gh#env GH_CONFIG_DIR=$ghdir /usr/bin/gh#g" "$cfg"; fi
+  ba="$(tunnel_alias "$cfg" "$backend")"; fa="$(tunnel_alias "$cfg" "$frontend")"
+  [[ -n "$ba" && -n "$fa" ]] || die 'could not resolve SSH aliases from generated config'
+  ssh -F "$cfg" -G "$ba" >/dev/null; ssh -F "$cfg" -G "$fa" >/dev/null
+  tunnel_spawn "$state/backend.log" "$state/backend.pid" ssh -F "$cfg" -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L "127.0.0.1:$bhp:127.0.0.1:$bp" "$ba"
+  tunnel_spawn "$state/frontend.log" "$state/frontend.pid" ssh -F "$cfg" -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L "127.0.0.1:$fhp:127.0.0.1:$fp" -R "127.0.0.1:$bhp:127.0.0.1:$bhp" "$fa"
+  for i in {1..30}; do
+    if tunnel_alive "$(cat "$state/backend.pid")" && tunnel_alive "$(cat "$state/frontend.pid")" && ! tunnel_free "$bhp" && ! tunnel_free "$fhp"; then ready=1; break; fi
+    sleep 1
+  done
+  if ((ready==0)); then kill "$(cat "$state/backend.pid")" "$(cat "$state/frontend.pid")" 2>/dev/null || true; tail -30 "$state"/*.log 2>/dev/null || true; die "SSH forwards failed to start; diagnostic files retained in $state"; fi
+  cat >"$state/state.env" <<EOF
+PROFILE='$profile'
+BACKEND_CODESPACE='$backend'
+FRONTEND_CODESPACE='$frontend'
+BACKEND_PORT='$bp'
+FRONTEND_PORT='$fp'
+BACKEND_HOST_PORT='$bhp'
+FRONTEND_HOST_PORT='$fhp'
+FRONTEND_HTTPS_PORT=''
+BACKEND_HTTPS_PORT=''
+TAILSCALE_FQDN=''
+EOF
+  note "backend $backend:$bp -> 127.0.0.1:$bhp"
+  note "frontend $frontend:$fp -> 127.0.0.1:$fhp"
+  note "frontend reverse bridge 127.0.0.1:$bhp -> backend via this host"
+  note "state/logs: $state"
+}
+tunnel_expose(){
+  local profile=vazzel state fh=10443 bh=11443 fqdn status opt
+  while (($#)); do opt="$1"; shift; case "$opt" in
+    --name) profile="$1"; shift;;
+    --frontend-https-port) fh="$1"; shift;;
+    --backend-https-port) bh="$1"; shift;;
+    --account) set_account "$1"; shift;;
+    *) die "unknown tunnel expose option: $opt";;
+  esac; done
+  [[ "$fh" =~ ^[0-9]+$ && "$bh" =~ ^[0-9]+$ ]] && ((fh>0 && fh<65536 && bh>0 && bh<65536 && fh!=bh)) || die 'invalid HTTPS ports'
+  state="$(tunnel_root)/$profile"; tunnel_load "$state"
+  tunnel_alive "$(cat "$state/backend.pid")" && tunnel_alive "$(cat "$state/frontend.pid")" || die 'SSH tunnels are not both running'
+  command -v tailscale >/dev/null && command -v jq >/dev/null || die 'tailscale and jq are required'
+  fqdn="$(tailscale status --json | jq -r '.Self.DNSName // empty' | sed 's/\.$//')"; [[ -n "$fqdn" ]] || die 'could not read Tailscale MagicDNS name'
+  status="$(tailscale serve status 2>&1 || true)"
+  grep -Eq ":$fh( |/|$)|:$bh( |/|$)" <<<"$status" && die 'one requested Tailscale Serve port is already configured'
+  tailscale serve --bg --https="$fh" "http://127.0.0.1:$FRONTEND_HOST_PORT"
+  if ! tailscale serve --bg --https="$bh" "http://127.0.0.1:$BACKEND_HOST_PORT"; then tailscale serve --https="$fh" off >/dev/null 2>&1 || true; die 'backend Serve failed; frontend handler rolled back'; fi
+  cat >>"$state/state.env" <<EOF
+FRONTEND_HTTPS_PORT='$fh'
+BACKEND_HTTPS_PORT='$bh'
+TAILSCALE_FQDN='$fqdn'
+EOF
+  note "frontend: https://$fqdn:$fh/"
+  note "backend admin: https://$fqdn:$bh/admin/"
+  note "backend API: https://$fqdn:$bh/"
+  note 'Tailscale Serve is tailnet-only.'
+}
+tunnel_status(){
+  local profile=vazzel state p label opt
+  while (($#)); do opt="$1"; shift; case "$opt" in --name) profile="$1"; shift;; --account) set_account "$1"; shift;; *) die "unknown tunnel status option: $opt";; esac; done
+  state="$(tunnel_root)/$profile"; tunnel_load "$state"
+  printf 'Profile: %s\nBackend: %s:%s -> 127.0.0.1:%s\nFrontend: %s:%s -> 127.0.0.1:%s\n' "$PROFILE" "$BACKEND_CODESPACE" "$BACKEND_PORT" "$BACKEND_HOST_PORT" "$FRONTEND_CODESPACE" "$FRONTEND_PORT" "$FRONTEND_HOST_PORT"
+  for label in backend frontend; do p="$(cat "$state/$label.pid")"; if tunnel_pid_owned "$p" "$state/ssh_config"; then echo "$label SSH session: running (pid $p)"; else echo "$label SSH session: STOPPED (pid $p)"; fi; done
+  ss -ltn | grep -E ":($BACKEND_HOST_PORT|$FRONTEND_HOST_PORT)\b" || true
+  tailscale serve status 2>/dev/null || true
+  if [[ -n "$TAILSCALE_FQDN" ]]; then echo "Frontend URL: https://$TAILSCALE_FQDN:$FRONTEND_HTTPS_PORT/"; echo "Backend admin URL: https://$TAILSCALE_FQDN:$BACKEND_HTTPS_PORT/admin/"; fi
+}
+tunnel_disconnect(){
+  local profile=vazzel state p label status opt
+  while (($#)); do opt="$1"; shift; case "$opt" in --name) profile="$1"; shift;; --account) set_account "$1"; shift;; *) die "unknown tunnel disconnect option: $opt";; esac; done
+  state="$(tunnel_root)/$profile"; tunnel_load "$state"
+  for label in backend frontend; do
+    p="$(cat "$state/$label.pid" 2>/dev/null || true)"
+    if tunnel_pid_owned "$p" "$state/ssh_config"; then kill "$p" 2>/dev/null || true
+    elif tunnel_alive "$p"; then die "refusing to kill unrelated/reused PID $p for $label; state retained at $state"; fi
+  done
+  for i in {1..10}; do
+    if ! tunnel_pid_owned "$(cat "$state/backend.pid")" "$state/ssh_config" && ! tunnel_pid_owned "$(cat "$state/frontend.pid")" "$state/ssh_config"; then break; fi
+    sleep 1
+  done
+  if tunnel_pid_owned "$(cat "$state/backend.pid")" "$state/ssh_config" || tunnel_pid_owned "$(cat "$state/frontend.pid")" "$state/ssh_config"; then die "SSH tunnel process did not exit; state retained at $state"; fi
+  if ! tunnel_free "$BACKEND_HOST_PORT" || ! tunnel_free "$FRONTEND_HOST_PORT"; then die "a forwarded host port remains occupied; state retained at $state"; fi
+  if [[ -n "$FRONTEND_HTTPS_PORT" || -n "$BACKEND_HTTPS_PORT" ]]; then
+    status="$(tailscale serve status 2>&1 || true)"
+    if [[ -n "$FRONTEND_HTTPS_PORT" ]] && grep -Fq "https://$TAILSCALE_FQDN:$FRONTEND_HTTPS_PORT" <<<"$status" && grep -Fq "proxy http://127.0.0.1:$FRONTEND_HOST_PORT" <<<"$status"; then tailscale serve --https="$FRONTEND_HTTPS_PORT" off; else note 'leaving frontend Serve handler because it no longer matches this profile'; fi
+    status="$(tailscale serve status 2>&1 || true)"
+    if [[ -n "$BACKEND_HTTPS_PORT" ]] && grep -Fq "https://$TAILSCALE_FQDN:$BACKEND_HTTPS_PORT" <<<"$status" && grep -Fq "proxy http://127.0.0.1:$BACKEND_HOST_PORT" <<<"$status"; then tailscale serve --https="$BACKEND_HTTPS_PORT" off; else note 'leaving backend Serve handler because it no longer matches this profile'; fi
+  fi
+  rm -rf "$state"; note "disconnected profile '$profile'"
+}
+
 cmd="${1:-help}"; shift || true
 case "$cmd" in
  help|-h|--help) usage; exit 0;;
  accounts) for a in gh-26 gh-06 gh-df gh-odo gh-do; do echo "[$a]"; (CS_BURST_ACCOUNT="$a"; export CS_BURST_ACCOUNT; ghx auth status 2>&1 | sed -n '1,6p') || true; done; exit 0;;
+ tunnel) sub="${1:-help}"; shift || true; case "$sub" in help|-h|--help) tunnel_usage;; connect) tunnel_connect "$@";; expose) tunnel_expose "$@";; status) tunnel_status "$@";; disconnect) tunnel_disconnect "$@";; *) die "unknown tunnel action $sub";; esac; exit 0;;
  status) while (($#)); do case "$1" in --account) shift; set_account "${1:-}"; shift;; *) die "unknown status option $1";; esac; done; ghx codespace list --json name,repository,state,machineName,createdAt,lastUsedAt,displayName,gitStatus,owner; exit $?;;
  exec)
    codespace=''; output=''
@@ -93,6 +257,7 @@ while (($#)); do case "$1" in
  --repo) repo="${2:?missing repo}"; shift 2;; --launcher) launcher="${2:?missing launcher}"; shift 2;; --machine) machine="${2:?missing machine}"; shift 2;; --idle-timeout) idle="${2:?missing timeout}"; idle_explicit=1; shift 2;; --retention) retention="${2:?missing retention}"; shift 2;; --workdir) workdir="${2:?missing workdir}"; shift 2;; --include) includes+=("${2:?missing include path}"); shift 2;; --allow-sensitive-snapshot) allow_sensitive=1; shift;; --keep-running) keep_running=1; shift;; --account) shift; set_account "${1:-}"; shift;; --keep) keep=1; shift;; --no-artifacts) no_artifacts=1; shift;; --dry-run) dry=1; shift;; --) shift; break;; *) die "unknown option '$1'; put command after --";; esac; done
  ((keep == 0 || keep_running == 0)) || die '--keep and --keep-running cannot be used together'
  if ((keep_running && !idle_explicit)); then idle=4h; fi
+if ((keep_running)); then printf "\nWARNING: --keep-running leaves this Codespace running with an idle timeout of %s. Codespaces also have a hard 12-hour maximum lifetime. Stop/delete it and collect required results before either limit.\n\n" "$idle"; fi
  (($#)) || die 'remote command is required after --'
 [[ "$repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || die '--repo must be OWNER/REPO'
 [[ "$launcher" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || die '--launcher must be OWNER/REPO'

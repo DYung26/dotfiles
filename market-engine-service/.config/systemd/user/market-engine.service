@@ -1,0 +1,24 @@
+[Unit]
+Description=Market Engine MT5 Bridge, Strategy Loop and Dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Projects/market-engine.wt/market-engine-main
+EnvironmentFile=%h/.config/market-engine/market-engine.env
+Environment=PYTHONUNBUFFERED=1
+Environment=MARKET_ENGINE_CONFIG=configs/default.yaml
+Environment=MARKET_ENGINE_EXECUTION_ENABLED=false
+Environment=MARKET_ENGINE_MT5_HOST=127.0.0.1
+Environment=MARKET_ENGINE_MT5_PORT=8765
+Environment=MARKET_ENGINE_DASHBOARD_HOST=100.82.234.105
+Environment=MARKET_ENGINE_DASHBOARD_PORT=4177
+Environment=MARKET_ENGINE_DATABASE=%h/.local/share/market-engine/market-engine.sqlite3
+Environment=MARKET_ENGINE_BACKTEST_DATA_DIR=%h/.local/share/wine-test/drive_c/users/dyung/AppData/Roaming/MetaQuotes/Terminal/Common/Files/market-engine
+ExecStart=%h/Projects/market-engine.wt/market-engine-main/.venv/bin/python -m engine.cli
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

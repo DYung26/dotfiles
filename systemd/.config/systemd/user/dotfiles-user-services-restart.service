@@ -1,0 +1,7 @@
+[Unit]
+Description=Restart approved dotfiles-managed user services hourly
+Documentation=file:%h/Projects/dotfiles/systemd/bin/restart-dotfiles-user-services
+
+[Service]
+Type=oneshot
+ExecStart=%h/Projects/dotfiles/systemd/bin/restart-dotfiles-user-services

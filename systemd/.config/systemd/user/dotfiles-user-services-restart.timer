@@ -1,0 +1,10 @@
+[Unit]
+Description=Restart approved dotfiles-managed user services hourly
+
+[Timer]
+OnActiveSec=1h
+OnUnitActiveSec=1h
+Unit=dotfiles-user-services-restart.service
+
+[Install]
+WantedBy=timers.target

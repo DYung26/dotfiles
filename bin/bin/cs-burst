@@ -14,6 +14,7 @@ Usage:
   cs-burst cp --codespace NAME [--account ALIAS] [--recursive] SOURCE DESTINATION
   cs-burst stop --codespace NAME [--account ALIAS]
   cs-burst delete --codespace NAME [--account ALIAS]
+  cs-burst clean --run RUN_ID [--workdir PATH] [--dry-run]
   cs-burst status [--account ALIAS]
   cs-burst tunnel connect|expose|status|disconnect [OPTIONS]
   cs-burst accounts
@@ -39,6 +40,7 @@ otherwise-excluded paths; .git metadata is never included. Sensitive paths requi
 --allow-sensitive-snapshot; contents are transferred to the Codespace and are
 visible to the remote command.
 
+Use clean to remove one completed run's local artifacts after reviewing its results.
 Use exec/cp/stop/delete to inspect and manage an existing Codespace. Use tunnel
 connect/expose/status/disconnect to bridge two Codespaces through this host and
 optionally publish both host loopback forwards to the tailnet.
@@ -215,11 +217,48 @@ tunnel_disconnect(){
   rm -rf "$state"; note "disconnected profile '$profile'"
 }
 
+
+clean_run(){
+  local run_id='' workdir="$PWD" dry=0 opt resolved_workdir artifacts_root target resolved_target size
+  while (($#)); do
+    opt="$1"; shift
+    case "$opt" in
+      --run) run_id="${1:?missing run ID}"; shift;;
+      --workdir) workdir="${1:?missing workdir}"; shift;;
+      --dry-run) dry=1;;
+      -h|--help)
+        printf '%s\n' 'Usage: cs-burst clean --run RUN_ID [--workdir PATH] [--dry-run]'
+        return 0;;
+      *) die "unknown clean option: $opt";;
+    esac
+  done
+  [[ "$run_id" =~ ^[0-9]{8}T[0-9]{6}Z-[0-9]+$ ]] || die 'clean requires a run ID in YYYYMMDDTHHMMSSZ-N format'
+  [[ -d "$workdir" ]] || die "workdir missing: $workdir"
+  resolved_workdir="$(cd -- "$workdir" && pwd -P)"
+  artifacts_root="$resolved_workdir/artifacts"
+  [[ -d "$artifacts_root" && ! -L "$artifacts_root" ]] || die "managed artifacts directory missing or is a symlink: $artifacts_root"
+  target="$artifacts_root/cs-burst-$run_id"
+  [[ -d "$target" && ! -L "$target" ]] || die "run artifacts directory missing or is a symlink: $target"
+  resolved_target="$(realpath -- "$target")"
+  [[ "$(dirname -- "$resolved_target")" == "$artifacts_root" ]] || die 'refusing to clean a path outside the managed artifacts directory'
+  size="$(du -sh -- "$target" | awk '{print $1}')"
+  note "run: $run_id"
+  note "artifacts: $target"
+  note "size: $size"
+  if ((dry)); then
+    note 'dry run; nothing removed'
+    return 0
+  fi
+  rm -rf -- "$target"
+  note "cleaned run artifacts: $run_id"
+}
+
 cmd="${1:-help}"; shift || true
 case "$cmd" in
  help|-h|--help) usage; exit 0;;
  accounts) for a in gh-26 gh-06 gh-df gh-odo gh-do; do echo "[$a]"; (CS_BURST_ACCOUNT="$a"; export CS_BURST_ACCOUNT; ghx auth status 2>&1 | sed -n '1,6p') || true; done; exit 0;;
  tunnel) sub="${1:-help}"; shift || true; case "$sub" in help|-h|--help) tunnel_usage;; connect) tunnel_connect "$@";; expose) tunnel_expose "$@";; status) tunnel_status "$@";; disconnect) tunnel_disconnect "$@";; *) die "unknown tunnel action $sub";; esac; exit 0;;
+ clean) clean_run "$@"; exit $?;;
  status) while (($#)); do case "$1" in --account) shift; set_account "${1:-}"; shift;; *) die "unknown status option $1";; esac; done; ghx codespace list --json name,repository,state,machineName,createdAt,lastUsedAt,displayName,gitStatus,owner; exit $?;;
  exec)
    codespace=''; output=''
@@ -269,7 +308,7 @@ ghx auth status >/dev/null 2>&1 || die 'selected gh profile is not authenticated
 ghx repo view "$launcher" --json nameWithOwner >/dev/null || die "cannot access launcher $launcher"
 ghx repo view "$repo" --json nameWithOwner >/dev/null || die "cannot access project repo $repo"
 stamp="$(date -u +%Y%m%dT%H%M%SZ)-$RANDOM"; tmp="$(mktemp -d "$TMP_BASE/cs-burst.XXXXXX")"; out_dir="$workdir/artifacts/cs-burst-$stamp"; mkdir -p "$out_dir"; cs_name=''
-finish(){ rc=$?; trap - EXIT INT TERM; set +e; if [[ -n "$cs_name" ]]; then if ((keep_running)); then note "leaving Codespace running for temporary test use: $cs_name"; elif ((keep)); then ghx codespace stop -c "$cs_name" >/dev/null 2>&1; note "keeping stopped worker (storage still bills): $cs_name"; else ghx codespace stop -c "$cs_name" >/dev/null 2>&1; ghx codespace delete -c "$cs_name" -f >/dev/null 2>&1; fi; fi; rm -rf "$tmp"; note "results: $out_dir"; exit "$rc"; }; trap finish EXIT INT TERM
+finish(){ rc=$?; trap - EXIT INT TERM; set +e; if [[ -n "$cs_name" ]]; then if ((keep_running)); then note "leaving Codespace running for temporary test use: $cs_name"; elif ((keep)); then ghx codespace stop -c "$cs_name" >/dev/null 2>&1; note "keeping stopped worker (storage still bills): $cs_name"; else ghx codespace stop -c "$cs_name" >/dev/null 2>&1; ghx codespace delete -c "$cs_name" -f >/dev/null 2>&1; fi; fi; rm -rf "$tmp"; note "run id: $stamp"; note "results: $out_dir"; exit "$rc"; }; trap finish EXIT INT TERM
 archive="$tmp/worktree.tar.gz"; snapshot="$tmp/snapshot"; mkdir -p "$snapshot"
 # Build the normal safe snapshot first, then overlay only explicitly selected paths.
 (cd "$workdir" && tar -czf "$archive" --exclude='./.git' --exclude='./node_modules' --exclude='*/node_modules' --exclude='./.venv' --exclude='*/.venv' --exclude='./venv' --exclude='*/venv' --exclude='./.next' --exclude='*/.next' --exclude='./dist' --exclude='*/dist' --exclude='./build' --exclude='*/build' --exclude='./coverage' --exclude='*/coverage' --exclude='./.turbo' --exclude='*/.turbo' --exclude='./artifacts' --exclude='*/artifacts' --exclude='./.env' --exclude='./.env.*' --exclude='*/.env' --exclude='*/.env.*' --exclude='./.npmrc' --exclude='*/.npmrc' --exclude='./.pypirc' --exclude='*/.pypirc' --exclude='./.netrc' --exclude='*/.netrc' --exclude='./.git-credentials' --exclude='*/.git-credentials' --exclude='./.ssh' --exclude='*/.ssh' --exclude='./id_rsa' --exclude='*/id_rsa' --exclude='./id_ed25519' --exclude='*/id_ed25519' --exclude='*.pem' --exclude='*.key' --exclude='*.p12' --exclude='*.pfx' --exclude='./.aws' --exclude='*/.aws' --exclude='./.azure' --exclude='*/.azure' --exclude='./.kube' --exclude='*/.kube' --exclude='./.docker/config.json' --exclude='*/.docker/config.json' --exclude='./.devcontainer' --exclude='*/.devcontainer' --exclude='./.vscode' --exclude='*/.vscode' --exclude='./.idea' --exclude='*/.idea' .)

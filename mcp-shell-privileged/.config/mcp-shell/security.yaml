@@ -68,6 +68,7 @@ security:
     - gh-df
     - gh-do
     - gh-odo
+    - cs-burst
     - chronix
     - grove
     - pulse

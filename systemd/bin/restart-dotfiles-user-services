@@ -23,6 +23,7 @@ readonly ALLOWED_UNITS=(
   "echoprofile-maximize.service"
   "hedging-dashboard-api.service"
   "hedging-dashboard.service"
+  "market-engine.service"
   "input-leapc.service"
   "mcp-shell-proxy.service"
   "mcp.service"

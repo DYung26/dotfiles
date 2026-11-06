@@ -5,6 +5,13 @@
 # SSH Keys & Certificates
 .ssh/
 ssh/
+
+# Version only the shared OpenSSH client config; keep every other SSH file private.
+!/ssh/
+ssh/*
+!/ssh/.ssh/
+ssh/.ssh/**
+!/ssh/.ssh/config
 *.pem
 *.key
 *.pub

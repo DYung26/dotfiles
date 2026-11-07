@@ -1,12 +1,13 @@
 services:
   workspace-mcp:
-    image: ghcr.io/metatool-ai/metamcp:latest
+    image: workspace-mcp:local
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: workspace-mcp
     restart: unless-stopped
     user: "1000:1000"
     working_dir: /home/dyung/Services/workspace-mcp
-    entrypoint: ["/usr/local/bin/uvx"]
-    command: ["workspace-mcp", "--transport", "streamable-http", "--tools", "docs", "drive"]
     env_file:
       - /home/dyung/Services/workspace-mcp/.env
     environment:

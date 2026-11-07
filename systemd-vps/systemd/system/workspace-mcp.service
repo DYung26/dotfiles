@@ -1,0 +1,17 @@
+[Unit]
+Description=Google Workspace MCP Streamable HTTP service
+Documentation=https://workspace-mcp.dyung.me/mcp
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/workspace-mcp
+ExecStart=/usr/bin/docker compose -f compose.yaml up -d --remove-orphans
+ExecStop=/usr/bin/docker compose -f compose.yaml down
+ExecReload=/usr/bin/docker compose -f compose.yaml up -d --force-recreate
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,40 @@
+services:
+  workspace-mcp:
+    image: ghcr.io/metatool-ai/metamcp:latest
+    container_name: workspace-mcp
+    restart: unless-stopped
+    user: "1001:1001"
+    working_dir: /home/nextjs
+    entrypoint: ["/usr/local/bin/uvx"]
+    command: ["workspace-mcp", "--transport", "streamable-http", "--tools", "docs", "drive"]
+    env_file:
+      - /home/dyung/Services/workspace-mcp/.env
+    environment:
+      HOME: /home/nextjs
+      GOOGLE_MCP_CREDENTIALS_DIR: /home/nextjs/.google_workspace_mcp/credentials
+    ports:
+      - "127.0.0.1:8003:8003"
+    volumes:
+      - metamcp_uv_cache:/home/nextjs/.cache/uv
+      - workspace_mcp_data:/home/nextjs/.google_workspace_mcp
+    networks:
+      - metamcp-network
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'code=$$(curl -sS -o /dev/null -w "%{http_code}" http://127.0.0.1:8003/mcp); case "$$code" in 200|400|401|405) exit 0 ;; *) exit 1 ;; esac'
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+
+volumes:
+  metamcp_uv_cache:
+    external: true
+  workspace_mcp_data:
+    external: true
+
+networks:
+  metamcp-network:
+    external: true
+    name: metamcp_metamcp-network

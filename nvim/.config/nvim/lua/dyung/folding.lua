@@ -16,11 +16,27 @@ local function configure_buffer(buf)
   end
 
   local win = vim.fn.bufwinid(buf)
-  if win == -1 then
+  if win == -1 or not vim.api.nvim_win_is_valid(win) then
+    return
+  end
+
+  -- A scheduled BufWinEnter/FileType/LspAttach callback may run after the
+  -- buffer has been wiped or the window has switched to another buffer.
+  -- Never configure window-local folding against a stale buffer handle.
+  if vim.api.nvim_win_get_buf(win) ~= buf then
     return
   end
 
   vim.api.nvim_win_call(win, function()
+    -- Re-check inside the window context: the buffer/window can change
+    -- between scheduling this callback and executing it.
+    if not vim.api.nvim_buf_is_valid(buf)
+      or not vim.api.nvim_win_is_valid(win)
+      or vim.api.nvim_win_get_buf(win) ~= buf
+    then
+      return
+    end
+
     -- Diffview manages folding in its diff windows (foldmethod=diff and
     -- foldlevel=0). Do not overwrite those settings with our expanded-by-
     -- default policy. This also covers real-file buffers displayed in diff mode.
@@ -96,8 +112,11 @@ function M.setup()
   vim.api.nvim_create_autocmd({ "BufWinEnter", "FileType" }, {
     group = group,
     callback = function(args)
+      local buf = args.buf
       vim.schedule(function()
-        configure_buffer(args.buf)
+        if vim.api.nvim_buf_is_valid(buf) then
+          configure_buffer(buf)
+        end
       end)
     end,
   })
@@ -105,8 +124,11 @@ function M.setup()
   vim.api.nvim_create_autocmd("LspAttach", {
     group = group,
     callback = function(args)
+      local buf = args.buf
       vim.schedule(function()
-        configure_buffer(args.buf)
+        if vim.api.nvim_buf_is_valid(buf) then
+          configure_buffer(buf)
+        end
       end)
     end,
   })

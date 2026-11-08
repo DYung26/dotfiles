@@ -308,3 +308,10 @@ mcp-shell-privileged/.config/mcp-shell/sudo.env
 
 # Local GitHub CLI authentication state (never commit tokens)
 /gh*/.config/*/hosts.yml
+
+# Device-local hourly systemd restart allowlists (not shared in Git).
+.restart-dotfiles-user-services.*.conf
+
+# Per-device systemd timer enablement links (created by systemctl enable).
+systemd/.config/systemd/user/timers.target.wants/docker-containers-restart.timer
+systemd/.config/systemd/user/timers.target.wants/dotfiles-user-services-restart.timer

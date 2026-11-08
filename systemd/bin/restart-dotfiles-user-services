@@ -1,113 +1,36 @@
 #!/usr/bin/env bash
-# Restart explicitly approved, dotfiles-stowed user services.
-#
-# Only active services are restarted. Unit files must be symlinks resolving
-# inside the dotfiles repo. The initial active-state snapshot is intentional:
-# restarting a dependency can stop its dependents, which must still be
-# restarted later in this same pass.
-
+# Device-specific allowlists live in ignored .restart-dotfiles-user-services.<hostname>.conf files.
 set -Eeuo pipefail
-
 readonly REPO_ROOT="${DOTFILES_REPO:-$HOME/Projects/dotfiles}"
 readonly USER_UNIT_DIR="$HOME/.config/systemd/user"
-
-# Keep this list explicit. Order dependencies before their dependents.
-readonly ALLOWED_UNITS=(
-  "cloudflared-mcp.service"
-  "echoprofile.service"
-  "echoprofile-wm.service"
-  "echoprofile-vnc.service"
-  "echoprofile-laptop-cdp-tunnel.service"
-  "playwright-mcp-laptop.service"
-  "echoprofile-login.service"
-  "echoprofile-maximize.service"
-  "hedging-dashboard-api.service"
-  "hedging-dashboard.service"
-  "market-engine.service"
-  "input-leapc.service"
-  "mcp-shell-proxy.service"
-  "mcp.service"
-  "mt5-xvfb.service"
-  "mt5-openbox.service"
-  "mt5-terminal.service"
-  "mt5-metaeditor.service"
-  "mt5-virtual-keyboard.service"
-  "mt5-vnc.service"
-  "mt5-mcp-gateway.service"
-  "mt5-maximize.service"
-  "multica-web-runtime.service"
-  "playwright-mcp.service"
-  "pulse.service"
-  "windows-vnc.service"
-)
-
-log() {
-  printf '[restart-dotfiles-services] %s\n' "$*"
-}
-
+readonly DEVICE_NAME="$(cat /etc/hostname)"
+readonly ALLOWLIST_FILE="${DOTFILES_RESTART_ALLOWLIST:-$REPO_ROOT/.restart-dotfiles-user-services.$DEVICE_NAME.conf}"
+log() { printf '[restart-dotfiles-services] %s\n' "$*"; }
 for command in realpath systemctl; do
-  if ! command -v "$command" >/dev/null 2>&1; then
-    log "ERROR: required command not found: $command"
-    exit 1
-  fi
+  command -v "$command" >/dev/null 2>&1 || { log "ERROR: required command not found: $command"; exit 1; }
 done
-
+[[ -f "$ALLOWLIST_FILE" ]] || { log "ERROR: device allowlist not found: $ALLOWLIST_FILE"; exit 1; }
 repo_real="$(realpath -e -- "$REPO_ROOT")"
+ALLOWED_UNITS=()
+while IFS= read -r unit; do
+  [[ -z "$unit" || "$unit" == \#* ]] && continue
+  ALLOWED_UNITS+=("$unit")
+done < "$ALLOWLIST_FILE"
 declare -A initially_active=()
-restarted=0
-skipped=0
-failed=0
-
-# Snapshot active states before touching anything. Dependency restarts may
-# stop other units, but those units still need to be brought back afterward.
+restarted=0 skipped=0 failed=0
 for unit in "${ALLOWED_UNITS[@]}"; do
-  if systemctl --user is-active --quiet "$unit" 2>/dev/null; then
-    initially_active["$unit"]=1
-  fi
+  [[ "$unit" == *.service ]] || { log "ERROR: invalid unit entry: $unit"; exit 1; }
+  if systemctl --user is-active --quiet "$unit" 2>/dev/null; then initially_active["$unit"]=1; fi
 done
-
 for unit in "${ALLOWED_UNITS[@]}"; do
   unit_path="$USER_UNIT_DIR/$unit"
-
-  if [[ ! -L "$unit_path" ]]; then
-    log "SKIP $unit: unit path is not a symlink"
-    ((skipped += 1))
-    continue
-  fi
-
+  if [[ ! -L "$unit_path" ]]; then log "SKIP $unit: unit path is not a symlink"; ((skipped += 1)); continue; fi
   target_real="$(realpath -e -- "$unit_path" 2>/dev/null || true)"
-  if [[ -z "$target_real" || "$target_real" != "$repo_real/"* ]]; then
-    log "SKIP $unit: symlink does not resolve inside $repo_real"
-    ((skipped += 1))
-    continue
-  fi
-
-  if [[ -z "${initially_active[$unit]:-}" ]]; then
-    log "SKIP $unit: not active when maintenance started"
-    ((skipped += 1))
-    continue
-  fi
-
-  if [[ "${DRY_RUN:-0}" == "1" ]]; then
-    log "WOULD RESTART $unit (source: $target_real)"
-    ((restarted += 1))
-    continue
-  fi
-
+  if [[ -z "$target_real" || "$target_real" != "$repo_real/"* ]]; then log "SKIP $unit: symlink does not resolve inside $repo_real"; ((skipped += 1)); continue; fi
+  if [[ -z "${initially_active[$unit]:-}" ]]; then log "SKIP $unit: not active when maintenance started"; ((skipped += 1)); continue; fi
+  if [[ "${DRY_RUN:-0}" == "1" ]]; then log "WOULD RESTART $unit (source: $target_real)"; ((restarted += 1)); continue; fi
   log "Restarting $unit (source: $target_real)"
-  if systemctl --user restart "$unit"; then
-    if systemctl --user is-active --quiet "$unit"; then
-      log "OK $unit"
-      ((restarted += 1))
-    else
-      log "ERROR $unit did not return to active state"
-      ((failed += 1))
-    fi
-  else
-    log "ERROR systemctl restart failed for $unit"
-    ((failed += 1))
-  fi
+  if systemctl --user restart "$unit" && systemctl --user is-active --quiet "$unit"; then log "OK $unit"; ((restarted += 1)); else log "ERROR restarting $unit"; ((failed += 1)); fi
 done
-
 log "Finished: restarted=$restarted skipped=$skipped failed=$failed"
 (( failed == 0 ))

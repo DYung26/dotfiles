@@ -3,6 +3,7 @@ Description=mcp-proxy bridge for mcp-shell (stdio -> streamable HTTP)
 After=network-online.target
 
 [Service]
+LimitNOFILE=65536:524288
 Type=simple
 Environment=PATH=/home/dyung/.local/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/home/dyung/go/bin:/home/dyung/.cargo/bin
 Environment=MCP_SHELL_SEC_CONFIG_FILE=/home/dyung/Projects/dotfiles/mcp-shell-privileged/.config/mcp-shell/security.yaml

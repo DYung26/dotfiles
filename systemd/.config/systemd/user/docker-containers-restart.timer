@@ -1,9 +1,9 @@
 [Unit]
-Description=Restart all running Docker containers hourly
+Description=Restart all running Docker containers every two hours
 
 [Timer]
-OnActiveSec=1h
-OnUnitActiveSec=1h
+OnActiveSec=2h
+OnUnitActiveSec=2h
 Unit=docker-containers-restart.service
 
 [Install]

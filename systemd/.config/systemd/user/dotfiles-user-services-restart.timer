@@ -1,9 +1,9 @@
 [Unit]
-Description=Restart approved dotfiles-managed user services hourly
+Description=Restart approved dotfiles-managed user services every two hours
 
 [Timer]
-OnActiveSec=1h
-OnUnitActiveSec=1h
+OnActiveSec=2h
+OnUnitActiveSec=2h
 Unit=dotfiles-user-services-restart.service
 
 [Install]

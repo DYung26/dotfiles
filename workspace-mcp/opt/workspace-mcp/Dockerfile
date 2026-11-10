@@ -16,4 +16,4 @@ WORKDIR /app
 EXPOSE 8003
 
 ENTRYPOINT ["uvx"]
-CMD ["workspace-mcp", "--transport", "streamable-http", "--tools", "docs", "drive"]
+CMD ["workspace-mcp", "--transport", "streamable-http", "--tool-tier", "complete"]

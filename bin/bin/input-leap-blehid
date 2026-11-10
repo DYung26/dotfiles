@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Switch Input Leap to the Windows host, then ask BleHid to select the iPhone.
+set -euo pipefail
+
+command -v xdotool >/dev/null || { echo "input-leap-blehid: xdotool is required" >&2; exit 127; }
+
+# This is the existing Input Leap server-side binding in input-leap.conf.
+xdotool key --clearmodifiers --delay 40 ctrl+super+w
+sleep 0.4
+# BleHid's existing Windows global hotkey.
+xdotool key --clearmodifiers --delay 40 ctrl+alt+Caps_Lock

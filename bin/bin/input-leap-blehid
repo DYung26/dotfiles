@@ -2,10 +2,17 @@
 # Switch Input Leap to the Windows host, then ask BleHid to select the iPhone.
 set -euo pipefail
 
-command -v xdotool >/dev/null || { echo "input-leap-blehid: xdotool is required" >&2; exit 127; }
-
-# This is the existing Input Leap server-side binding in input-leap.conf.
-xdotool key --clearmodifiers --delay 40 ctrl+super+w
-sleep 0.4
-# BleHid's existing Windows global hotkey.
-xdotool key --clearmodifiers --delay 40 ctrl+alt+Caps_Lock
+if command -v wtype >/dev/null; then
+    # Wayland virtual keyboard (Omarchy/Hyprland).
+    wtype -M ctrl -M logo -k w -m logo -m ctrl
+    sleep 0.4
+    wtype -M ctrl -M alt -k Caps_Lock -m alt -m ctrl
+elif command -v xdotool >/dev/null; then
+    # X11/XWayland fallback (Arch).
+    xdotool key --clearmodifiers --delay 40 ctrl+super+w
+    sleep 0.4
+    xdotool key --clearmodifiers --delay 40 ctrl+alt+Caps_Lock
+else
+    echo "input-leap-blehid: install wtype (Wayland) or xdotool (X11)" >&2
+    exit 127
+fi

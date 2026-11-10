@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Switch Input Leap to Windows, then activate BleHid on the iPhone.
 set -euo pipefail
-logger -t input-leap-blehid "invoked on ${XDG_CURRENT_DESKTOP:-unknown}\/${XDG_SESSION_TYPE:-unknown}"
+desktop="${XDG_CURRENT_DESKTOP:-}"
+logger -t input-leap-blehid "invoked on ${desktop:-unknown}/${XDG_SESSION_TYPE:-unknown}"
 
-if [[ "${XDG_CURRENT_DESKTOP,,}" == *gnome* ]] && [[ -x "$HOME/.local/bin/ydotool" ]]; then
+if [[ "${desktop,,}" == *gnome* ]] && [[ -x "$HOME/.local/bin/ydotool" ]]; then
     # GNOME/Mutter does not implement the virtual-keyboard protocol used by wtype.
     # ydotool injects through uinput; ydotoold runs as a user service.
     ydotool="$HOME/.local/bin/ydotool"

@@ -17,6 +17,7 @@ const env = {
   WORKSPACE_MCP_PORT: '8003',
   GOOGLE_MCP_CREDENTIALS_DIR: '/home/nextjs/.google_workspace_mcp/credentials',
   WORKSPACE_EXTERNAL_URL: 'https://workspace-mcp.dyung.me',
+  OAUTH_ALLOWED_ORIGINS: 'https://vps-mcp.dyung.me',
   GOOGLE_OAUTH_REDIRECT_URI: 'https://workspace-mcp.dyung.me/oauth2callback'
 };
 fs.mkdirSync('/home/dyung/Services/workspace-mcp', {recursive:true});

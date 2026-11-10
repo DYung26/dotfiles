@@ -1,18 +1,24 @@
 #!/usr/bin/env bash
-# Switch Input Leap to the Windows host, then ask BleHid to select the iPhone.
+# Switch Input Leap to Windows, then activate BleHid on the iPhone.
 set -euo pipefail
 
-if command -v wtype >/dev/null; then
-    # Wayland virtual keyboard (Omarchy).
+if [[ "${XDG_CURRENT_DESKTOP,,}" == *gnome* ]] && [[ -x "$HOME/.local/bin/ydotool" ]]; then
+    # GNOME/Mutter does not implement the virtual-keyboard protocol used by wtype.
+    # ydotool injects through uinput; ydotoold runs as a user service.
+    ydotool="$HOME/.local/bin/ydotool"
+    "$ydotool" key --key-delay 35 29:1 56:1 44:1 44:0 56:0 29:0
+    sleep 0.4
+    "$ydotool" key --key-delay 35 29:1 56:1 58:1 58:0 56:0 29:0
+elif command -v wtype >/dev/null; then
+    # Omarchy/Hyprland.
     wtype -M ctrl -M alt -k z -m alt -m ctrl
     sleep 0.4
     wtype -M ctrl -M alt -k Caps_Lock -m alt -m ctrl
-elif command -v xdotool >/dev/null; then
-    # X11/XWayland fallback (Arch).
+elif [[ "${XDG_SESSION_TYPE:-}" != wayland ]] && command -v xdotool >/dev/null; then
     xdotool key --clearmodifiers --delay 40 ctrl+alt+z
     sleep 0.4
     xdotool key --clearmodifiers --delay 40 ctrl+alt+Caps_Lock
 else
-    echo "input-leap-blehid: install wtype (Wayland) or xdotool (X11)" >&2
+    echo "input-leap-blehid: no supported Wayland input injector (GNOME requires ydotoold; Omarchy requires wtype)" >&2
     exit 127
 fi

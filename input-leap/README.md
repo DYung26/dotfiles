@@ -1,18 +1,14 @@
 # Input Leap + BleHid
 
-Use Ctrl+Alt+V on the Linux client to switch Input Leap to the Windows host, then activate BleHid's existing iPhone target hotkey.
+Use Ctrl+Alt+V on the Linux client to switch Input Leap to Windows, then activate BleHid's iPhone target.
 
-The helper sends these in order:
+The helper sends Ctrl+Alt+Z, waits 400 ms, then sends Ctrl+Alt+CapsLock.
 
-1. Ctrl+Alt+Z to trigger the Windows-switch binding configured in Input Leap.
-2. Ctrl+Alt+CapsLock to select/cycle BleHid's target.
+Input injection backends:
+- Omarchy/Hyprland: wtype.
+- Arch/GNOME Wayland: ydotool, with the per-user ydotoold service.
 
-A 400 ms pause separates the two keystrokes so the screen switch can complete.
-
-Requirements:
-- The manually launched input-leapc client is connected on the Linux host.
-- The Windows Input Leap server has Ctrl+Alt+Z configured to switch to that host.
-- BleHid is running on Windows and the iPhone is paired/subscribed.
-- wtype is used on Omarchy; xdotool is the fallback used on GNOME/Arch.
-
-Ctrl+Alt+V is configured in Omarchy's Hyprland bindings and in Arch's GNOME custom keyboard shortcuts. The unfinished Windows Input Leap service is not managed by this helper.
+On Arch, ydotoold needs access to /dev/uinput; the current session already has a device ACL.
+The Windows Input Leap server must have Ctrl+Alt+Z mapped to switch to the Windows host.
+BleHid must be running and the iPhone paired/subscribed.
+The helper uses the manually launched Input Leap clients; it does not start or alter the unfinished Windows service.

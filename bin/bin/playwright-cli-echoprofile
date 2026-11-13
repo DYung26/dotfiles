@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PLAYWRIGHT_MCP_USER_DATA_DIR="${PLAYWRIGHT_MCP_USER_DATA_DIR:-${ECHOPROFILE_PROFILE_DIR:-$HOME/.local/share/echoprofile/edge-profile}}"
+if [[ -z "${PLAYWRIGHT_MCP_EXECUTABLE_PATH:-}" ]]; then
+  for candidate in "$HOME"/.cache/ms-playwright/chromium-*/chrome-linux64/chrome; do
+    [[ -x "$candidate" ]] && export PLAYWRIGHT_MCP_EXECUTABLE_PATH="$candidate"
+  done
+fi
+if [[ -z "${PLAYWRIGHT_MCP_EXECUTABLE_PATH:-}" ]]; then
+  echo "No Playwright Chromium executable found. Set PLAYWRIGHT_MCP_EXECUTABLE_PATH explicitly." >&2
+  exit 1
+fi
+
+if [[ -x "$(dirname "$0")/nvm-exec" ]]; then
+  exec "$(dirname "$0")/nvm-exec" playwright-cli "$@"
+fi
+exec playwright-cli "$@"

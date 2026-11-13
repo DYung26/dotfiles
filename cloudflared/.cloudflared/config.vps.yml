@@ -2,6 +2,10 @@ tunnel: ${CLOUDFLARED_TUNNEL_NAME}
 credentials-file: ${CLOUDFLARED_CREDENTIALS_FILE}
 
 ingress:
+  - hostname: vps-mcp.dyung.me
+    path: ^/agentation(/.*)?$
+    service: http://127.0.0.1:4748
+
   - hostname: ${CLOUDFLARED_HOSTNAME}
     service: ${CLOUDFLARED_SERVICE}
     originRequest:

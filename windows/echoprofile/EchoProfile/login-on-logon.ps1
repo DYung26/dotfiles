@@ -1,6 +1,7 @@
-$env:ECHOPROFILE_CHANNEL='msedge'
+﻿$env:ECHOPROFILE_CHANNEL='msedge'
 $env:ECHOPROFILE_HOST='100.98.45.0'
 $env:ECHOPROFILE_MULTICA_DIR = (Join-Path $env:USERPROFILE 'Projects/multica-web-runtime/extension/dist')
+$env:ECHOPROFILE_BROWSER_EXTENSION_DIR = (Join-Path $env:USERPROFILE 'Projects/echoprofile/echoprofile/browser_extension')
 $ErrorActionPreference = 'Stop'
 $root = Join-Path $env:LOCALAPPDATA 'EchoProfile'
 $log = Join-Path $root 'login.log'

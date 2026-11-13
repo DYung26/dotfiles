@@ -315,3 +315,6 @@ mcp-shell-privileged/.config/mcp-shell/sudo.env
 # Per-device systemd timer enablement links (created by systemctl enable).
 systemd/.config/systemd/user/timers.target.wants/docker-containers-restart.timer
 systemd/.config/systemd/user/timers.target.wants/dotfiles-user-services-restart.timer
+
+# MetaMCP operations API key (kept local; Stow links it into ~/.config).
+metamcp-ops/.config/metamcp-ops/env

@@ -1,0 +1,22 @@
+[Unit]
+Description=Agentation HTTP and MCP Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/dyung/Projects/agentation-mcp
+Environment=NODE_PATH=/home/dyung/Projects/agentation-mcp/node_modules
+Environment=AGENTATION_STORE=sqlite
+Environment=AGENTATION_PORT=4747
+ExecStart=/home/dyung/.nvm/versions/node/v24.21.0/bin/node /home/dyung/Projects/agentation-mcp/server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/dyung/.agentation
+
+[Install]
+WantedBy=default.target

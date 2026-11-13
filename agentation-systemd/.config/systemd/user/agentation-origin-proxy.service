@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/home/dyung/Projects/agentation-mcp
-Environment=AGENTATION_ALLOWED_ORIGINS=https://user.dev.shaarenow.com,https://sparkler.dev.shaarenow.com,https://admin.dev.shaarenow.com,https://staging.inkuire.com,https://inkuire.com,https://trockly.com,http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:8081,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:3002,http://127.0.0.1:8081
+Environment=AGENTATION_ALLOWED_ORIGINS=https://app.dev.shaarenow.com,https://user.dev.shaarenow.com,https://sparkler.dev.shaarenow.com,https://admin.dev.shaarenow.com,https://www.getshaare.com,https://staging.inkuire.com,https://inkuire.com,http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:8081,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:3002,http://127.0.0.1:8081
 ExecStart=/home/dyung/.nvm/versions/node/v24.21.0/bin/node /home/dyung/Projects/agentation-mcp/origin-proxy.js
 Restart=on-failure
 RestartSec=5

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+project_root="${METAMCP_OPS_PROJECT_ROOT:-$HOME/Projects/metamcp.wt/ai-dev/apps/backend}"
+node_bin="${METAMCP_OPS_NODE_BIN:-$HOME/.local/bin/node}"
+entrypoint="$project_root/dist/metamcp-ops.js"
+
+if [[ ! -d "$project_root" ]]; then
+  echo "MetaMCP Ops project directory not found: $project_root" >&2
+  exit 127
+fi
+
+if [[ ! -x "$node_bin" ]]; then
+  echo "MetaMCP Ops requires an executable Node.js binary at $node_bin" >&2
+  exit 127
+fi
+
+if [[ ! -f "$entrypoint" ]]; then
+  echo "MetaMCP Ops entrypoint not found: $entrypoint" >&2
+  exit 127
+fi
+
+cd "$project_root"
+exec "$node_bin" "$entrypoint"

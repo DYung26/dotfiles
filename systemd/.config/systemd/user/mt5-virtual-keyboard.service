@@ -5,10 +5,11 @@ After=mt5-xvfb.service mt5-openbox.service
 
 [Service]
 Type=simple
-Environment=DISPLAY=:1
-Environment=XAUTHORITY=%h/.Xauthority-mt5
-ExecStartPre=/usr/bin/sh -c "for i in $(/usr/bin/seq 1 30); do /usr/bin/xdpyinfo -display :1 >/dev/null 2>&1 && exit 0; /usr/bin/sleep 1; done; exit 1"
-ExecStart=/usr/bin/xvkbd -no-keypad -geometry 900x260+40+40
+Environment=MT5_DISPLAY=:1
+Environment=MT5_XAUTHORITY=%h/.Xauthority-mt5
+EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+ExecStartPre=/usr/bin/env DISPLAY=${MT5_DISPLAY} XAUTHORITY=${MT5_XAUTHORITY} %h/Projects/dotfiles/systemd/bin/wait-for-x-display
+ExecStart=/usr/bin/env DISPLAY=${MT5_DISPLAY} XAUTHORITY=${MT5_XAUTHORITY} /usr/bin/xvkbd -no-keypad -geometry 900x260+40+40
 Restart=on-failure
 RestartSec=3
 

@@ -1,24 +1,20 @@
 [Unit]
-Description=echoprofile clone server (persistent Edge profile + ephemeral clones)
-# Launches real, headed browser windows (the persistent profile, and every
-# clone), so - same as pulse.service - this only makes sense once a
-# graphical session actually exists to put those windows on.
+Description=EchoProfile browser server
+After=graphical-session.target network-online.target
+Wants=network-online.target
 PartOf=graphical-session.target
-After=graphical-session.target
 
 [Service]
 Type=simple
-# Hot reload defaults on in `echoprofile serve` for interactive dev use, but
-# it restarts the whole process on any file change - which orphans the
-# persistent profile window and any open clones (see server.py's run()).
-# Not appropriate for a long-running background service.
 Environment=ECHOPROFILE_NO_RELOAD=1
-Environment=ECHOPROFILE_HOST=0.0.0.0
-Environment=ECHOPROFILE_SWITCHBOARD_DIR=%h/Projects/switchboard.wt/dist
-Environment=ECHOPROFILE_MULTICA_DIR=%h/Projects/multica-web-runtime/extension/dist
-ExecStart=%h/.local/bin/echoprofile serve
+Environment=ECHOPROFILE_HOST=127.0.0.1
+Environment=ECHOPROFILE_BIND_LOOPBACK=1
+EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+ExecStartPre=/usr/bin/env DISPLAY=${ECHOPROFILE_DISPLAY} WAYLAND_DISPLAY=${ECHOPROFILE_WAYLAND_DISPLAY} %h/Projects/dotfiles/systemd/bin/wait-for-x-display
+ExecStart=/usr/bin/env DISPLAY=${ECHOPROFILE_DISPLAY} WAYLAND_DISPLAY=${ECHOPROFILE_WAYLAND_DISPLAY} %h/.local/bin/echoprofile serve
 Restart=on-failure
-RestartSec=2
+RestartSec=3
+TimeoutStartSec=180
 
 [Install]
-WantedBy=graphical-session.target
+WantedBy=default.target

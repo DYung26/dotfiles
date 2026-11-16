@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+display=${DISPLAY:-}
+[[ -n $display ]] || { echo "DISPLAY is not set" >&2; exit 1; }
+display_number=${display#*:}
+display_number=${display_number%%.*}
+socket="/tmp/.X11-unix/X$display_number"
+wait_seconds=${DOTFILES_DISPLAY_WAIT_SECONDS:-120}
+for ((attempt=0; attempt<wait_seconds; attempt++)); do
+  [[ -S $socket ]] && exit 0
+  sleep 1
+done
+echo "X display $display did not become ready at $socket" >&2
+exit 1

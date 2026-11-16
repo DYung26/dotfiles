@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Expose the local MT5 MCP endpoints to Docker on the host-gateway IP only."""
+import os
 import socket
 import socketserver
 import threading
 
-GATEWAY = "172.20.0.1"
-MAPPINGS = {22345: 22345, 22346: 22346}
+GATEWAY = os.environ.get("MT5_MCP_GATEWAY_HOST", "172.20.0.1")
+MAPPINGS = {
+    int(os.environ.get("MT5_MCP_GATEWAY_PORT_1", "22345")): int(os.environ.get("MT5_MCP_TARGET_PORT_1", "22345")),
+    int(os.environ.get("MT5_MCP_GATEWAY_PORT_2", "22346")): int(os.environ.get("MT5_MCP_TARGET_PORT_2", "22346")),
+}
 
 class ProxyHandler(socketserver.BaseRequestHandler):
     def handle(self):
@@ -30,7 +33,10 @@ class ProxyHandler(socketserver.BaseRequestHandler):
                         pass
             a = threading.Thread(target=pump, args=(self.request, upstream), daemon=True)
             b = threading.Thread(target=pump, args=(upstream, self.request), daemon=True)
-            a.start(); b.start(); a.join(); b.join()
+            a.start()
+            b.start()
+            a.join()
+            b.join()
 
 class ThreadingServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True

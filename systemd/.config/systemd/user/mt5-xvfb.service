@@ -4,6 +4,10 @@ After=network.target
 
 [Service]
 Type=simple
+Environment=MT5_DISPLAY=:1
+Environment=MT5_XAUTHORITY=%h/.Xauthority-mt5
+Environment=MT5_SCREEN=3072x1600x24
+EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
 ExecStart=%h/Projects/dotfiles/systemd/bin/mt5-xvfb-start
 Restart=on-failure
 RestartSec=3

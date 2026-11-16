@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+mode=${1:-main}
+if [[ $mode == laptop ]]; then prefix=PLAYWRIGHT_MCP_LAPTOP; else prefix=PLAYWRIGHT_MCP; fi
+getenv() {
+  local key=${prefix}_$1
+  printf '%s' "${!key:-}"
+}
+endpoint=$(getenv CDP_ENDPOINT)
+port=$(getenv PORT)
+host=$(getenv HOST)
+allowed_hosts=$(getenv ALLOWED_HOSTS)
+args=()
+[[ -z $endpoint ]] || args+=(--cdp-endpoint="$endpoint")
+[[ -n $endpoint ]] || args+=(--browser=chromium)
+[[ -z $port ]] || args+=(--port="$port")
+[[ -z $host ]] || args+=(--host="$host")
+[[ -z $allowed_hosts ]] || args+=(--allowed-hosts="$allowed_hosts")
+if [[ -n ${PLAYWRIGHT_MCP_NODE_BIN:-} && -n ${PLAYWRIGHT_MCP_CLI:-} ]]; then
+  exec "$PLAYWRIGHT_MCP_NODE_BIN" "$PLAYWRIGHT_MCP_CLI" "${args[@]}"
+fi
+exec "$HOME/Projects/dotfiles/systemd/bin/nvm-exec" npx @playwright/mcp@latest "${args[@]}"

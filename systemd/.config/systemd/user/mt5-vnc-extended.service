@@ -1,0 +1,23 @@
+[Unit]
+Description=Second VNC view of MetaTrader 5 at the EchoProfile Windows resolution
+Requires=mt5-xvfb.service
+After=mt5-xvfb.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=MT5_DISPLAY=:1
+Environment=MT5_XAUTHORITY=%h/.Xauthority-mt5
+Environment=MT5_TAILNET_IP=127.0.0.1
+Environment=MT5_VNC_EXTENDED_PORT=5903
+Environment=MT5_VNC_PASSWORD_FILE=%h/.vnc/mt5-vnc.pass
+Environment=MT5_VNC_EXTENDED_SCALE=1280x720
+EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+ExecStartPre=/usr/bin/env DISPLAY=${MT5_DISPLAY} XAUTHORITY=${MT5_XAUTHORITY} %h/Projects/dotfiles/systemd/bin/wait-for-x-display
+ExecStartPre=%h/Projects/dotfiles/systemd/bin/wait-for-tailnet-ip ${MT5_TAILNET_IP}
+ExecStart=/usr/bin/env DISPLAY=${MT5_DISPLAY} XAUTHORITY=${MT5_XAUTHORITY} /usr/bin/x11vnc -display ${MT5_DISPLAY} -auth ${MT5_XAUTHORITY} -listen ${MT5_TAILNET_IP} -rfbport ${MT5_VNC_EXTENDED_PORT} -no6 -noipv6 -rfbauth ${MT5_VNC_PASSWORD_FILE} -forever -shared -noxdamage -modtweak -xkb -scale ${MT5_VNC_EXTENDED_SCALE}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

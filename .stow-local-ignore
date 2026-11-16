@@ -26,3 +26,9 @@ sync-conflict
 ^README.*$
 ^LICENSE.*$
 ^docs$
+
+# Per-device systemd settings stay in the repo but are never Stow-linked.
+
+# Per-device systemd environment files are not Stow-linked.
+^systemd[.]env$
+^systemd[.]env[.]example$

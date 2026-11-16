@@ -1,0 +1,23 @@
+[Unit]
+Description=Agentation HTTP and MCP Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Projects/agentation-mcp
+Environment=NODE_PATH=%h/Projects/agentation-mcp/node_modules
+Environment=AGENTATION_STORE=sqlite
+Environment=AGENTATION_PORT=4747
+EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+ExecStart=%h/Projects/dotfiles/systemd/bin/nvm-exec node server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.agentation
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+export DISPLAY="${ECHOPROFILE_DISPLAY:-${DISPLAY:-:2}}"
+for attempt in $(seq 1 90); do
+  window_id="$(wmctrl -l | grep "Google Chrome for Testing" | head -n 1 | cut -d " " -f 1)"
+  if [ -n "$window_id" ]; then
+    wmctrl -ir "$window_id" -b remove,hidden || true
+    wmctrl -ir "$window_id" -b add,maximized_vert,maximized_horz
+    sleep 1
+    screen_size="$(xdpyinfo | awk '/dimensions:/ {print $2}')"
+    window_size="$(wmctrl -lG | awk -v id="$window_id" '$1 == id {print $5 "x" $6}')"
+    printf '%s
+' "$(wmctrl -lG | grep -F "$window_id" || true)"
+    [ "$window_size" = "$screen_size" ] && exit 0
+  fi
+  sleep 2
+done
+exit 1

@@ -5,7 +5,7 @@ After=network-online.target
 [Service]
 LimitNOFILE=65536:524288
 Type=simple
-Environment=PATH=/home/dyung/.local/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/home/dyung/go/bin:/home/dyung/.cargo/bin
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:%h/go/bin:%h/.cargo/bin
 Environment=MCP_SHELL_SEC_CONFIG_FILE=%h/.config/mcp-shell/security.yaml
 ExecStart=%h/.local/bin/mcp-proxy --port=8090 --host=0.0.0.0 --pass-environment -- %h/go/bin/mcp-shell
 Restart=always

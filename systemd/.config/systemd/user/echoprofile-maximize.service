@@ -1,0 +1,14 @@
+[Unit]
+Description=Maximize the EchoProfile Chromium window on its virtual display
+Requires=echoprofile-login.service
+After=echoprofile-login.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+ExecStart=%h/Projects/dotfiles/systemd/bin/echoprofile-maximize-window
+TimeoutStartSec=200
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target

@@ -5,6 +5,9 @@ After=mt5-terminal.service mt5-openbox.service
 
 [Service]
 Type=oneshot
+Environment=MT5_DISPLAY=:1
+Environment=MT5_XAUTHORITY=%h/.Xauthority-mt5
+EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
 ExecStart=%h/Projects/dotfiles/systemd/bin/mt5-maximize-window
 RemainAfterExit=yes
 

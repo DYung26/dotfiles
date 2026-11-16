@@ -5,7 +5,8 @@ After=network-online.target
 [Service]
 Type=simple
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:%h/go/bin:%h/.cargo/bin
-ExecStart=%h/Projects/dotfiles/systemd/bin/nvm-exec npx @playwright/mcp@latest --browser=chromium --port=8931 --host=0.0.0.0 --allowed-hosts '*'
+EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+ExecStart=%h/Projects/dotfiles/systemd/bin/playwright-mcp main
 WorkingDirectory=%h
 Restart=always
 RestartSec=5

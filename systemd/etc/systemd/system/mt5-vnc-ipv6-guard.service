@@ -1,0 +1,21 @@
+[Unit]
+Description=Block unintended IPv6 access to the MT5 VNC listener
+Documentation=man:ip6tables(8)
+Wants=network-online.target netfilter-persistent.service
+After=network-online.target netfilter-persistent.service tailscaled.service
+PartOf=netfilter-persistent.service
+
+[Service]
+Type=oneshot
+User=dyung
+Group=dyung
+RemainAfterExit=yes
+NoNewPrivileges=true
+CapabilityBoundingSet=CAP_NET_ADMIN
+AmbientCapabilities=CAP_NET_ADMIN
+Environment=MT5_VNC_PORT=5900
+EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+ExecStart=/bin/sh -c '/usr/sbin/ip6tables -C INPUT -p tcp --dport ${MT5_VNC_PORT} -j DROP 2>/dev/null || /usr/sbin/ip6tables -I INPUT 1 -p tcp --dport ${MT5_VNC_PORT} -j DROP'
+
+[Install]
+WantedBy=multi-user.target

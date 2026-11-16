@@ -8,10 +8,11 @@ Wants=network-online.target
 Type=simple
 Environment=WINEPREFIX=%h/.local/share/wine-test
 Environment=WINEARCH=win64
-Environment=DISPLAY=:1
-Environment=XAUTHORITY=%h/.Xauthority-mt5
+Environment=MT5_DISPLAY=:1
+Environment=MT5_XAUTHORITY=%h/.Xauthority-mt5
+EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
 WorkingDirectory=%h/.local/share/wine-test/drive_c/Program Files/MetaTrader 5
-ExecStart=/usr/bin/wine "%h/.local/share/wine-test/drive_c/Program Files/MetaTrader 5/terminal64.exe"
+ExecStart=/usr/bin/env DISPLAY=${MT5_DISPLAY} XAUTHORITY=${MT5_XAUTHORITY} WINEPREFIX=${WINEPREFIX} WINEARCH=${WINEARCH} /usr/bin/wine "%h/.local/share/wine-test/drive_c/Program Files/MetaTrader 5/terminal64.exe"
 Restart=on-failure
 RestartSec=10
 TimeoutStopSec=30

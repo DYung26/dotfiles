@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+address=${1:-}
+[[ -n $address ]] || { echo "Tailnet address argument is required" >&2; exit 2; }
+wait_seconds=${DOTFILES_TAILNET_WAIT_SECONDS:-30}
+for ((attempt=0; attempt<wait_seconds; attempt++)); do
+  if /usr/sbin/ip -4 addr show | /usr/bin/grep -Fq "$address"; then exit 0; fi
+  sleep 1
+done
+echo "Tailnet address $address did not appear" >&2
+exit 1

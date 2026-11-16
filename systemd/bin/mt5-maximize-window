@@ -3,10 +3,13 @@ set -eu
 export DISPLAY="${MT5_DISPLAY:-:1}"
 export XAUTHORITY="${MT5_XAUTHORITY:-$HOME/.Xauthority-mt5}"
 for i in $(seq 1 90); do
-  if wmctrl -l | grep -q 'MetaTrader 5'; then
-    wmctrl -r 'MetaTrader 5' -b add,maximized_vert,maximized_horz || true
+  window_id="$(wmctrl -lx 2>/dev/null | awk 'tolower($3) ~ /terminal64\.exe/ { print $1; exit }')"
+  if [ -n "$window_id" ]; then
+    echo "Maximizing MetaTrader 5 window $window_id"
+    wmctrl -i -r "$window_id" -b add,maximized_vert,maximized_horz
     exit 0
   fi
   sleep 2
 done
+echo "MetaTrader 5 terminal window was not found" >&2
 exit 1

@@ -1,9 +1,24 @@
 .git
 *env*
 
-# Cloudflare credentials are per-device secrets; never sync them via dotfiles.
+// Cloudflare credentials are per-device secrets; never sync them via dotfiles.
 cloudflared/.cloudflared/*.json
 cloudflared/.cloudflared/cert.pem
 
-# Do not propagate conflict copies between devices.
+// Do not propagate conflict copies between devices.
 *sync-conflict*
+
+// Local workspace, runtime state, and backups
+.grove
+.aisp
+.multica
+.stfolder
+.stversions
+*.bak
+.restart-dotfiles-user-services.*.conf
+nohup.out
+note.md
+todo.md
+containers/mcp-proxy-shell
+/gh-*/.config/gh*/hosts.yml
+/gh/.config/gh/hosts.yml

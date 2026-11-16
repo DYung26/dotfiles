@@ -323,3 +323,14 @@ metamcp-ops/.config/metamcp-ops/env
 systemd/systemd.env
 systemd/.config/dotfiles/systemd/systemd.env
 systemd/.config/dotfiles/systemd/systemd.secrets.env
+
+# Local workspace and agent state
+/.grove/
+/.aisp/
+.multica/
+.stfolder/
+.stversions/
+/.restart-dotfiles-user-services.*.conf
+/nohup.out
+/note.md
+/todo.md

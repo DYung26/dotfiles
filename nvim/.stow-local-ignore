@@ -1,0 +1,2 @@
+# Local MultiCA runtime state is not part of the Neovim package.
+^\.multica$

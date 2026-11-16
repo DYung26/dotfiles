@@ -1,0 +1,14 @@
+[Unit]
+Description=Forward the VPS Pulse socket to this Arch host over Tailscale SSH
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
+ExecStartPre=/usr/bin/install -d -m 0700 %h/.local/run
+ExecStart=/usr/bin/ssh -N -T -o BatchMode=yes -o ConnectTimeout=10 -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o StreamLocalBindUnlink=yes -o StreamLocalBindMask=0177 -L %h/.local/run/pulse.sock:${PULSE_SOCKET_REMOTE_PATH} ${PULSE_SOCKET_REMOTE_HOST}
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=default.target

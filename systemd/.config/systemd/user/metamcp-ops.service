@@ -1,0 +1,20 @@
+[Unit]
+Description=MetaMCP Operations MCP
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=%h/.config/metamcp-ops/env
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+EnvironmentFile=-%h/.config/metamcp-ops/env
+ExecStart=%h/bin/run-metamcp-ops
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

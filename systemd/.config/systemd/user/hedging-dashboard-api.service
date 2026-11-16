@@ -6,7 +6,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=%h/Projects/hedging/dashboard
-ExecStart=/usr/bin/python3 %h/Projects/hedging/dashboard/server.py
+# Use the project virtualenv so the pinned backtest-engine dependency is available.
+ExecStart=%h/bin/run-hedging-dashboard-api
 Restart=on-failure
 RestartSec=3
 Environment=PYTHONUNBUFFERED=1

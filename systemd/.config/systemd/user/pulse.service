@@ -1,19 +1,15 @@
 [Unit]
-Description=Pulse note-tracking daemon
-# Only meaningful in a graphical session (the GNOME extension needs
-# XDG_RUNTIME_DIR, the same one the daemon binds its socket under).
-PartOf=graphical-session.target
+Description=Pulse local state daemon
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Service]
 Type=simple
-# Also read from ~/.config/environment.d/pulse.conf for non-systemd
-# consumers (GNOME Shell); duplicated here since systemd --user does
-# not reliably re-source environment.d before unit start ordering in
-# all cases, and this unit should be correct standalone regardless.
-Environment=PULSE_SOCKET_PATH=/tmp/pulse/pulse.sock
-ExecStart=%h/Projects/pulse/core/target/release/pulse-daemon
+ExecStartPre=/usr/bin/install -d -m 2770 %h/.local/run
+ExecStart=%h/.local/lib/pulse/pulse-daemon
+Environment=PULSE_SOCKET_PATH=%h/.local/run/pulse.sock
 Restart=on-failure
-RestartSec=2
+RestartSec=5
 
 [Install]
-WantedBy=graphical-session.target
+WantedBy=default.target

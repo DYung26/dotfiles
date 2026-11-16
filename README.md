@@ -91,7 +91,7 @@ These are home-directory packages when the host uses them:
 - Shell and terminal: `bash-*`, `zsh`, `ble`, `starship`, `alacritty`, `wezterm`, `tmux`, `tmuxp`, `htop`.
 - Shared tools: `bin`, `git`, `ssh`, `nvim`, `stowrc`.
 - GitHub CLI: `gh` plus only the relevant `gh-<account>` profile packages. Account-specific `hosts.yml` files are local authentication state, not portable configuration.
-- Desktop integrations: `input-leap`, `input-leap-gui`, and `pulse` only on hosts that actually use those services. Omarchy's `hyprland` package contains only `~/.config/hypr/hyprland.lua`; it loads Omarchy's own defaults and the other personal modules remain Omarchy-managed local files.
+- Desktop integrations: `input-leap`, `input-leap-gui`, and `pulse` only on hosts that actually use those services. Omarchy's `hyprland` package contains only `~/.config/hypr/hyprland.lua`; it loads Omarchy's own defaults and the other personal modules remain Omarchy-managed local files. Pulse runs its daemon on the VPS; the Arch GNOME extension reaches that same socket through `pulse-socket-forward.service`.
 - MCP integrations: `mcp`, `mcp-shell-privileged`, `mcp-relay`, `metamcp-ops`, and `workspace-mcp` only on the hosts where their applications run. `mcp-relay` is currently documented as Ubuntu/VPS-only; keep its watcher timer disabled unless explicitly requested.
 - `cloudflared`: per-device configuration templates and local tunnel settings. Before editing, inspect the live unit and its drop-ins; a service may use an app-owned config path instead of the tracked template.
 
@@ -124,6 +124,14 @@ A directory at the repository root is not automatically a package to install on 
 - Do not enable every unit on every device. Enable only the units intended for that device and preserve deliberate disabled states.
 - For each affected host, inspect `systemctl list-unit-files`, `is-enabled`, `status`, and relevant journals. Verify both boot enablement and runtime health.
 - Use `systemd-analyze verify` after editing units. Reload the correct manager after Stow.
+
+### Pulse cross-device socket
+
+- The Pulse daemon runs on the VPS as `pulse.service`, using `%h/.local/lib/pulse/pulse-daemon` and `%h/.local/run/pulse.sock`.
+- The MetaMCP container on the VPS runs `pulse-mcp` from `%h/.local/lib/pulse/pulse-mcp`; its `PULSE_SOCKET_PATH` must match the daemon socket.
+- Arch runs `pulse-socket-forward.service`, which forwards the VPS Unix socket over Tailscale SSH to the same local path. The GNOME extension and local MCP clients use `/home/dyung/.local/run/pulse.sock`.
+- Install `pulse-daemon` and `pulse-mcp` under `~/.local/lib/pulse` on the VPS. Do not point runtime services at a Grove-managed Cargo `target` symlink. The daemon creates a group-writable socket for the container's supplementary GID 1000; the Arch forward socket is owner-only.
+- The MetaMCP container already bind-mounts `/home/dyung`; do not add a separate `/tmp/pulse` volume.
 
 ## Verification checklist
 

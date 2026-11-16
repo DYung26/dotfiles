@@ -28,7 +28,10 @@ for unit in "${ALLOWED_UNITS[@]}"; do
   target_real="$(realpath -e -- "$unit_path" 2>/dev/null || true)"
   if [[ -z "$target_real" || "$target_real" != "$repo_real/"* ]]; then log "SKIP $unit: symlink does not resolve inside $repo_real"; ((skipped += 1)); continue; fi
   if [[ -z "${initially_active[$unit]:-}" ]]; then log "SKIP $unit: not active when maintenance started"; ((skipped += 1)); continue; fi
-  if [[ "${DRY_RUN:-0}" == "1" ]]; then log "WOULD RESTART $unit (source: $target_real)"; ((restarted += 1)); continue; fi
+  unit_type="$(systemctl --user show --property=Type --value "$unit" 2>/dev/null || true)"
+  if [[ -z "$unit_type" ]]; then log "ERROR $unit: could not determine Type; refusing to restart"; ((failed += 1)); continue; fi
+  if [[ "$unit_type" == "oneshot" ]]; then log "SKIP $unit: Type=oneshot (completed one-shot jobs are not restarted)"; ((skipped += 1)); continue; fi
+  if [[ "${DRY_RUN:-0}" == "1" ]]; then log "WOULD RESTART $unit (source: $target_real; Type=$unit_type)"; ((restarted += 1)); continue; fi
   log "Restarting $unit (source: $target_real)"
   if systemctl --user restart "$unit" && systemctl --user is-active --quiet "$unit"; then log "OK $unit"; ((restarted += 1)); else log "ERROR restarting $unit"; ((failed += 1)); fi
 done

@@ -32,3 +32,4 @@ sync-conflict
 # Per-device systemd environment files are not Stow-linked.
 ^systemd[.]env$
 ^systemd[.]env[.]example$
+^tests$

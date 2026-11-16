@@ -5,7 +5,8 @@ After=network-online.target echoprofile.service echoprofile-wm.service echoprofi
 
 [Service]
 Type=oneshot
-EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
 ExecStartPre=/usr/bin/curl --fail --silent --show-error --retry 60 --retry-connrefused --retry-delay 1 ${ECHOPROFILE_HEALTH_URL}
 ExecStart=/usr/bin/env DISPLAY=${ECHOPROFILE_DISPLAY} WAYLAND_DISPLAY=${ECHOPROFILE_WAYLAND_DISPLAY} %h/.local/bin/echoprofile login
 TimeoutStartSec=180

@@ -5,7 +5,8 @@ After=network-online.target
 [Service]
 Type=simple
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:%h/go/bin:%h/.cargo/bin
-EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
 ExecStart=%h/Projects/dotfiles/systemd/bin/playwright-mcp main
 WorkingDirectory=%h
 Restart=always

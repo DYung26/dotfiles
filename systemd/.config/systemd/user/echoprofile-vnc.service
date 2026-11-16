@@ -5,7 +5,8 @@ After=echoprofile.service
 
 [Service]
 Type=simple
-EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
 ExecStartPre=/usr/bin/env DISPLAY=${ECHOPROFILE_DISPLAY} %h/Projects/dotfiles/systemd/bin/wait-for-x-display
 ExecStartPre=%h/Projects/dotfiles/systemd/bin/wait-for-tailnet-ip ${ECHOPROFILE_VNC_HOST}
 ExecStart=/usr/bin/env DISPLAY=${ECHOPROFILE_DISPLAY} /usr/bin/x11vnc -no6 -noipv6 -display ${ECHOPROFILE_DISPLAY} -listen ${ECHOPROFILE_VNC_HOST} -rfbport ${ECHOPROFILE_VNC_PORT} -rfbauth ${ECHOPROFILE_VNC_PASSWORD_FILE} -forever -shared -noxdamage -modtweak -xkb

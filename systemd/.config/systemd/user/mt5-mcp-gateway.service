@@ -6,12 +6,8 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-Environment=MT5_MCP_GATEWAY_HOST=172.20.0.1
-Environment=MT5_MCP_GATEWAY_PORT_1=22345
-Environment=MT5_MCP_GATEWAY_PORT_2=22346
-Environment=MT5_MCP_TARGET_PORT_1=22345
-Environment=MT5_MCP_TARGET_PORT_2=22346
-EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
 ExecStartPre=/usr/bin/sh -c "for i in $(/usr/bin/seq 1 60); do if /usr/bin/nc -z 127.0.0.1 22345 || /usr/bin/nc -z 127.0.0.1 22346; then exit 0; fi; /usr/bin/sleep 1; done; exit 1"
 ExecStart=/usr/bin/python3 %h/Projects/dotfiles/systemd/bin/mt5-mcp-gateway.py
 Restart=always

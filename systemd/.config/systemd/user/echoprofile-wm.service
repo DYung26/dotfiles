@@ -5,7 +5,8 @@ After=echoprofile.service
 
 [Service]
 Type=simple
-EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
 ExecStartPre=/usr/bin/env DISPLAY=${ECHOPROFILE_DISPLAY} %h/Projects/dotfiles/systemd/bin/wait-for-x-display
 ExecStart=/usr/bin/env DISPLAY=${ECHOPROFILE_DISPLAY} /usr/bin/openbox --sm-disable
 Restart=on-failure

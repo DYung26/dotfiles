@@ -13,8 +13,8 @@ RemainAfterExit=yes
 NoNewPrivileges=true
 CapabilityBoundingSet=CAP_NET_ADMIN
 AmbientCapabilities=CAP_NET_ADMIN
-Environment=MT5_VNC_PORT=5900
-EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+EnvironmentFile=/home/dyung/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=/home/dyung/.config/dotfiles/systemd/systemd.env
 ExecStart=/bin/sh -c '/usr/sbin/ip6tables -C INPUT -p tcp --dport ${MT5_VNC_PORT} -j DROP 2>/dev/null || /usr/sbin/ip6tables -I INPUT 1 -p tcp --dport ${MT5_VNC_PORT} -j DROP'
 
 [Install]

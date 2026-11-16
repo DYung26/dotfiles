@@ -9,7 +9,8 @@ WorkingDirectory=%h/Projects/agentation-mcp
 Environment=NODE_PATH=%h/Projects/agentation-mcp/node_modules
 Environment=AGENTATION_STORE=sqlite
 Environment=AGENTATION_PORT=4747
-EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
 ExecStart=%h/Projects/dotfiles/systemd/bin/nvm-exec node server.js
 Restart=on-failure
 RestartSec=5

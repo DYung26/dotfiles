@@ -5,7 +5,8 @@ After=echoprofile-login.service
 
 [Service]
 Type=oneshot
-EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
 ExecStart=%h/Projects/dotfiles/systemd/bin/echoprofile-maximize-window
 TimeoutStartSec=200
 RemainAfterExit=yes

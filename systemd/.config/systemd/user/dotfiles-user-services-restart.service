@@ -1,5 +1,5 @@
 [Unit]
-Description=Restart approved dotfiles-managed user services hourly
+Description=Restart approved dotfiles-managed user services every three hours
 Documentation=file:%h/Projects/dotfiles/systemd/bin/restart-dotfiles-user-services
 
 [Service]

@@ -6,12 +6,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-Environment=MT5_DISPLAY=:1
-Environment=MT5_XAUTHORITY=%h/.Xauthority-mt5
-Environment=MT5_TAILNET_IP=127.0.0.1
-Environment=MT5_VNC_PORT=5900
-Environment=MT5_VNC_PASSWORD_FILE=%h/.vnc/mt5-vnc.pass
-EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
 ExecStartPre=/usr/bin/env DISPLAY=${MT5_DISPLAY} XAUTHORITY=${MT5_XAUTHORITY} %h/Projects/dotfiles/systemd/bin/wait-for-x-display
 ExecStartPre=%h/Projects/dotfiles/systemd/bin/wait-for-tailnet-ip ${MT5_TAILNET_IP}
 ExecStart=/usr/bin/env DISPLAY=${MT5_DISPLAY} XAUTHORITY=${MT5_XAUTHORITY} /usr/bin/x11vnc -display ${MT5_DISPLAY} -auth ${MT5_XAUTHORITY} -listen ${MT5_TAILNET_IP} -rfbport ${MT5_VNC_PORT} -no6 -noipv6 -rfbauth ${MT5_VNC_PASSWORD_FILE} -forever -shared -noxdamage -modtweak -xkb

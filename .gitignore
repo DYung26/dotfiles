@@ -312,12 +312,14 @@ mcp-shell-privileged/.config/mcp-shell/sudo.env
 # Device-local hourly systemd restart allowlists (not shared in Git).
 .restart-dotfiles-user-services.*.conf
 
-# Per-device systemd environment (one private file per Linux device).
-systemd/systemd.env
-
 # Per-device systemd timer enablement links (created by systemctl enable).
 systemd/.config/systemd/user/timers.target.wants/docker-containers-restart.timer
 systemd/.config/systemd/user/timers.target.wants/dotfiles-user-services-restart.timer
 
 # MetaMCP operations API key (kept local; Stow links it into ~/.config).
 metamcp-ops/.config/metamcp-ops/env
+
+# Local systemd selector and secrets; tracked device profiles remain version-controlled.
+systemd/systemd.env
+systemd/.config/dotfiles/systemd/systemd.env
+systemd/.config/dotfiles/systemd/systemd.secrets.env

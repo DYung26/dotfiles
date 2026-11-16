@@ -5,7 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
 ExecStart=/usr/bin/ssh -N -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 127.0.0.1:${ECHOPROFILE_LAPTOP_LOCAL_PORT}:127.0.0.1:${ECHOPROFILE_LAPTOP_REMOTE_PORT} ${ECHOPROFILE_LAPTOP_SSH_USER}@${ECHOPROFILE_LAPTOP_TAILNET_IP}
 Restart=always
 RestartSec=10

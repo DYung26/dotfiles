@@ -1,4 +1,4 @@
 ^docs$
-^systemd[.]env$
-^systemd[.]env[.]example$
 ^__pycache__$
+^systemd[.]env$
+^systemd[.]secrets[.]env$

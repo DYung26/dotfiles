@@ -7,7 +7,8 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=%h/Projects/agentation-mcp
 Environment=AGENTATION_ALLOWED_ORIGINS=https://app.dev.shaarenow.com,https://user.dev.shaarenow.com,https://sparkler.dev.shaarenow.com,https://admin.dev.shaarenow.com,https://www.getshaare.com,https://staging.inkuire.com,https://inkuire.com,http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:8081,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:3002,http://127.0.0.1:8081
-EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
 ExecStart=%h/Projects/dotfiles/systemd/bin/nvm-exec node origin-proxy.js
 Restart=on-failure
 RestartSec=5

@@ -5,7 +5,8 @@ After=network-online.target
 
 [Service]
 Type=simple
-EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
 ExecStartPre=%h/Projects/dotfiles/systemd/bin/wait-for-tailnet-ip ${ECHOPROFILE_VNC_HOST}
 ExecStart=/usr/bin/Xtigervnc ${ECHOPROFILE_DISPLAY} -geometry ${WINDOWS_VNC_GEOMETRY} -depth ${WINDOWS_VNC_DEPTH} -interface ${ECHOPROFILE_VNC_HOST} -rfbport ${WINDOWS_VNC_PORT} -rfbauth ${WINDOWS_VNC_PASSWORD_FILE} -SecurityTypes VncAuth -AcceptSetDesktopSize=1 -AlwaysShared -UseIPv4=1 -UseIPv6=0 -nolisten tcp -ac
 Restart=on-failure

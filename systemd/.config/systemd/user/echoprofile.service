@@ -6,10 +6,8 @@ PartOf=graphical-session.target
 
 [Service]
 Type=simple
-Environment=ECHOPROFILE_NO_RELOAD=1
-Environment=ECHOPROFILE_HOST=127.0.0.1
-Environment=ECHOPROFILE_BIND_LOOPBACK=1
-EnvironmentFile=-%h/Projects/dotfiles/systemd/systemd.env
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
 ExecStartPre=/usr/bin/env DISPLAY=${ECHOPROFILE_DISPLAY} WAYLAND_DISPLAY=${ECHOPROFILE_WAYLAND_DISPLAY} %h/Projects/dotfiles/systemd/bin/wait-for-x-display
 ExecStart=/usr/bin/env DISPLAY=${ECHOPROFILE_DISPLAY} WAYLAND_DISPLAY=${ECHOPROFILE_WAYLAND_DISPLAY} %h/.local/bin/echoprofile serve
 Restart=on-failure

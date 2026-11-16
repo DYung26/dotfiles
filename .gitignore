@@ -334,3 +334,8 @@ systemd/.config/dotfiles/systemd/systemd.secrets.env
 /nohup.out
 /note.md
 /todo.md
+
+# Keep the Chronix API launcher tracked even though user-local state is ignored.
+!systemd/.local/
+!systemd/.local/bin/
+!systemd/.local/bin/chronix-api

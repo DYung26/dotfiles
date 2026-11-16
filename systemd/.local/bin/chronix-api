@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export PYTHONPATH="$HOME/Projects/chronix${PYTHONPATH:+:$PYTHONPATH}"
+exec "$HOME/.local/share/uv/tools/chronix/bin/python" -m chronix.api.server "$@"

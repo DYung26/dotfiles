@@ -14,7 +14,7 @@ Install user units and helper links:
 
 Install system-level units only on machines that need them (currently the VPS):
 
-    sudo stow --no-folding -t / --ignore='^[.]config$' --ignore='^bin$' --ignore='^[.]local$' systemd
+    sudo stow --no-folding -t / --ignore='^[.]config$' --ignore='^bin$' --ignore='^[.]local$' --ignore='^system$' systemd
 
 Then reload systemd and enable only the units appropriate for that device. Stowing a unit does not enable it.
 

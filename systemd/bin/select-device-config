@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  printf 'Usage: select-device-config <arch|vps|omarchy>\n' >&2
+  exit 2
+fi
+
+device=$1
+case "$device" in
+  arch|vps|omarchy) ;;
+  *)
+    printf 'Unsupported device profile: %s\n' "$device" >&2
+    exit 2
+    ;;
+esac
+
+script_path="$(readlink -f "$0")"
+package_dir="$(cd -- "$(dirname -- "$script_path")/.." && pwd)"
+config_dir="$package_dir/.config/dotfiles/systemd"
+home_config_dir="$HOME/.config/dotfiles/systemd"
+profile="systemd.env.$device"
+selector="$config_dir/systemd.env"
+secrets="$config_dir/systemd.secrets.env"
+home_selector="$home_config_dir/systemd.env"
+home_secrets="$home_config_dir/systemd.secrets.env"
+
+if [[ ! -f "$config_dir/$profile" ]]; then
+  printf 'Missing device profile: %s\n' "$config_dir/$profile" >&2
+  exit 1
+fi
+if [[ ! -f "$home_config_dir/systemd.env.common" || ! -f "$home_config_dir/$profile" ]]; then
+  printf 'Stow the systemd package first; tracked profiles are missing from %s\n' "$home_config_dir" >&2
+  exit 1
+fi
+
+if [[ -e "$selector" && ! -L "$selector" ]]; then
+  printf 'Refusing to replace non-symlink selector: %s\n' "$selector" >&2
+  exit 1
+fi
+if [[ -L "$selector" ]]; then
+  current_selector="$(readlink "$selector")"
+  case "$current_selector" in
+    systemd.env.arch|systemd.env.vps|systemd.env.omarchy) ;;
+    *)
+      printf 'Refusing to replace unexpected selector target: %s\n' "$current_selector" >&2
+      exit 1
+      ;;
+  esac
+fi
+
+if [[ -L "$secrets" ]]; then
+  printf 'Refusing to change permissions on symlinked secrets file: %s\n' "$secrets" >&2
+  exit 1
+fi
+
+if [[ -e "$home_selector" && ! -L "$home_selector" ]]; then
+  printf 'Refusing to replace non-symlink home selector: %s\n' "$home_selector" >&2
+  exit 1
+fi
+if [[ -L "$home_selector" && "$(readlink -f "$home_selector")" != "$selector" ]]; then
+  printf 'Refusing to replace unexpected home selector target: %s\n' "$(readlink -f "$home_selector")" >&2
+  exit 1
+fi
+
+if [[ -e "$home_secrets" && ! -L "$home_secrets" ]]; then
+  printf 'Refusing to replace non-symlink home secrets link: %s\n' "$home_secrets" >&2
+  exit 1
+fi
+if [[ -L "$home_secrets" && "$(readlink -f "$home_secrets")" != "$secrets" ]]; then
+  printf 'Refusing to replace unexpected home secrets target: %s\n' "$(readlink -f "$home_secrets")" >&2
+  exit 1
+fi
+
+mkdir -p "$home_config_dir"
+ln -sfn "$profile" "$selector"
+if [[ ! -e "$secrets" ]]; then
+  (umask 077; : > "$secrets")
+fi
+chmod 600 "$secrets"
+ln -sfn "$selector" "$home_selector"
+ln -sfn "$secrets" "$home_secrets"
+printf 'Selected %s; local secrets file is protected.\n' "$device"

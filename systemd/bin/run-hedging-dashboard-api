@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+project_root="${HEDGING_PROJECT_ROOT:-$HOME/Projects/hedging}"
+python="$project_root/.venv/bin/python"
+server="$project_root/dashboard/server.py"
+
+if [[ ! -x "$python" ]]; then
+  echo "Hedging Dashboard API requires the project virtualenv at $python" >&2
+  echo "Create it with the project's documented uv sync workflow before enabling this service." >&2
+  exit 127
+fi
+
+if [[ ! -f "$server" ]]; then
+  echo "Hedging Dashboard API entrypoint not found: $server" >&2
+  exit 127
+fi
+
+export PYTHONPATH="$project_root${PYTHONPATH:+:$PYTHONPATH}"
+exec "$python" "$server"

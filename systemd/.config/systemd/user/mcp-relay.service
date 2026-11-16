@@ -1,13 +1,16 @@
 [Unit]
 Description=MCP Relay Registry Server
 After=network-online.target
+ConditionPathExists=%h/.config/mcp-relay/env
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Service]
 Type=simple
-EnvironmentFile=%h/.config/mcp-relay/env
+EnvironmentFile=-%h/.config/mcp-relay/env
 ExecStart=%h/bin/start-mcp-relay.sh
 WorkingDirectory=%h
-Restart=always
+Restart=on-failure
 RestartSec=5
 
 [Install]

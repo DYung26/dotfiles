@@ -1,8 +1,9 @@
 [Unit]
 Description=mcp-relay watcher (single run, triggered by mcp-relay-watcher.timer)
 After=network-online.target
+ConditionPathExists=%h/.config/mcp-relay/watcher-env
 
 [Service]
 Type=oneshot
-EnvironmentFile=%h/.config/mcp-relay/watcher-env
+EnvironmentFile=-%h/.config/mcp-relay/watcher-env
 ExecStart=%h/bin/mcp-relay-watcher.sh

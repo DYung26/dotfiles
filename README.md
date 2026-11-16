@@ -92,7 +92,7 @@ These are home-directory packages when the host uses them:
 - Shared tools: `bin`, `git`, `ssh`, `nvim`, `stowrc`.
 - GitHub CLI: `gh` plus only the relevant `gh-<account>` profile packages. Account-specific `hosts.yml` files are local authentication state, not portable configuration.
 - Desktop integrations: `input-leap`, `input-leap-gui`, and `pulse` only on hosts that actually use those services. Omarchy's `hyprland` package contains only `~/.config/hypr/hyprland.lua`; it loads Omarchy's own defaults and the other personal modules remain Omarchy-managed local files. Pulse runs its daemon on the VPS; the Arch GNOME extension reaches that same socket through `pulse-socket-forward.service`.
-- MCP integrations: `mcp`, `mcp-shell-privileged`, `mcp-relay`, `metamcp-ops`, and `workspace-mcp` only on the hosts where their applications run. `mcp-relay` is currently documented as Ubuntu/VPS-only; keep its watcher timer disabled unless explicitly requested.
+- MCP integrations: `mcp`, `mcp-shell-privileged`, `workspace-mcp`, and `metamcp-ops` only on the hosts where their applications run. `metamcp-ops` is VPS-only; its local ignored environment file is mode 600 and its systemd unit is tracked in the `systemd` package. `mcp-relay` is paused and VPS-only: its default port conflicts with MetaMCP Ops, its environment is absent, and its watcher still needs authentication and end-to-end failover validation.
 - `cloudflared`: per-device configuration templates and local tunnel settings. Before editing, inspect the live unit and its drop-ins; a service may use an app-owned config path instead of the tracked template.
 
 ### Conditional or non-home packages

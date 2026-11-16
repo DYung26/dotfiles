@@ -1,7 +1,6 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const os = require('node:os');
-const { execFileSync } = require('node:child_process');
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as os from 'node:os';
 
 const home = process.env.DOTFILES_HOME || os.homedir();
 const configDirectory = path.join(home, '.config', 'dotfiles', 'systemd');
@@ -20,29 +19,49 @@ for (const filename of ['systemd.env.common', 'systemd.env']) {
   }
 }
 
-const sql = "SELECT env::text FROM mcp_servers WHERE uuid='466c946b-4f73-4e1f-810e-5bbebf321be6'";
-const raw = execFileSync('docker', ['exec', 'metamcp-pg', 'psql', '-U', 'metamcp_user', '-d', 'metamcp_db', '-Atc', sql], { encoding: 'utf8' }).trim();
-if (!raw) throw new Error('Google Workspace MCP server record not found or env is empty');
-
-const saved = JSON.parse(raw);
-const required = ['GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET', 'FASTMCP_SERVER_AUTH_GOOGLE_JWT_SIGNING_KEY'];
-for (const key of required) {
-  if (!saved[key]) throw new Error('Missing required saved variable: ' + key);
+const serviceDirectory = path.join(home, 'Services', 'workspace-mcp');
+const outputFile = path.join(serviceDirectory, '.env');
+if (!fs.existsSync(outputFile)) {
+  throw new Error('Refusing to create Workspace MCP env without an existing credentials file: ' + outputFile);
 }
-if (String(saved.MCP_ENABLE_OAUTH21).toLowerCase() !== 'true') {
-  throw new Error('OAuth 2.1 is not enabled in the saved server env');
+if (fs.lstatSync(outputFile).isSymbolicLink()) {
+  throw new Error('Refusing to overwrite a symlinked Workspace MCP env file: ' + outputFile);
 }
 
-const requiredConfig = ['WORKSPACE_EXTERNAL_URL', 'OAUTH_ALLOWED_ORIGINS', 'GOOGLE_OAUTH_REDIRECT_URI', 'GOOGLE_MCP_CREDENTIALS_DIR'];
+const existingLines = fs.readFileSync(outputFile, 'utf8').split(/\r?\n/);
+const existing = new Map();
+for (const line of existingLines) {
+  const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+  if (match) existing.set(match[1], match[2]);
+}
+
+const requiredSecrets = [
+  'GOOGLE_OAUTH_CLIENT_ID',
+  'GOOGLE_OAUTH_CLIENT_SECRET',
+  'FASTMCP_SERVER_AUTH_GOOGLE_JWT_SIGNING_KEY'
+];
+for (const key of requiredSecrets) {
+  if (!existing.get(key)) {
+    throw new Error('Missing required existing Workspace MCP credential: ' + key);
+  }
+}
+if (String(existing.get('MCP_ENABLE_OAUTH21')).toLowerCase() !== 'true') {
+  throw new Error('OAuth 2.1 is not enabled in the existing Workspace MCP env');
+}
+
+const requiredConfig = [
+  'WORKSPACE_EXTERNAL_URL',
+  'OAUTH_ALLOWED_ORIGINS',
+  'GOOGLE_OAUTH_REDIRECT_URI',
+  'GOOGLE_MCP_CREDENTIALS_DIR'
+];
 for (const key of requiredConfig) {
-  if (!process.env[key]) throw new Error('Missing selected device configuration: ' + key);
+  if (!process.env[key]) {
+    throw new Error('Missing selected device configuration: ' + key);
+  }
 }
 
-const env = {
-  GOOGLE_OAUTH_CLIENT_ID: saved.GOOGLE_OAUTH_CLIENT_ID,
-  GOOGLE_OAUTH_CLIENT_SECRET: saved.GOOGLE_OAUTH_CLIENT_SECRET,
-  FASTMCP_SERVER_AUTH_GOOGLE_JWT_SIGNING_KEY: saved.FASTMCP_SERVER_AUTH_GOOGLE_JWT_SIGNING_KEY,
-  MCP_ENABLE_OAUTH21: 'true',
+const deviceConfig = {
   WORKSPACE_MCP_HOST: process.env.WORKSPACE_MCP_HOST || '0.0.0.0',
   WORKSPACE_MCP_PORT: process.env.WORKSPACE_MCP_PORT || '8003',
   GOOGLE_MCP_CREDENTIALS_DIR: process.env.GOOGLE_MCP_CREDENTIALS_DIR,
@@ -51,15 +70,41 @@ const env = {
   GOOGLE_OAUTH_REDIRECT_URI: process.env.GOOGLE_OAUTH_REDIRECT_URI
 };
 
-const serviceDirectory = path.join(home, 'Services', 'workspace-mcp');
-fs.mkdirSync(serviceDirectory, { recursive: true });
-const outputFile = path.join(serviceDirectory, '.env');
-const output = Object.entries(env)
-  .map(([key, value]) => key + '=' + String(value).replace(/[\r\n]/g, ''))
-  .join('\n') + '\n';
+const seen = new Set();
+const outputLines = [];
+for (const line of existingLines) {
+  const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+  if (!match || !Object.hasOwn(deviceConfig, match[1])) {
+    outputLines.push(line);
+    continue;
+  }
 
-fs.writeFileSync(outputFile, output, { mode: 0o600 });
-fs.chmodSync(outputFile, 0o600);
-fs.chownSync(serviceDirectory, process.getuid(), process.getgid());
-fs.chownSync(outputFile, process.getuid(), process.getgid());
-process.stdout.write('Created protected environment file with ' + Object.keys(env).length + ' settings; secret values were not displayed.\n');
+  const key = match[1];
+  if (seen.has(key)) continue;
+  seen.add(key);
+  outputLines.push(key + '=' + String(deviceConfig[key]).replace(/[\r\n]/g, ''));
+}
+
+for (const [key, value] of Object.entries(deviceConfig)) {
+  if (!seen.has(key)) {
+    outputLines.push(key + '=' + String(value).replace(/[\r\n]/g, ''));
+  }
+}
+
+while (outputLines.length && outputLines[outputLines.length - 1] === '') {
+  outputLines.pop();
+}
+const output = outputLines.join('\n') + '\n';
+const temporaryFile = outputFile + '.tmp-' + process.pid;
+
+try {
+  fs.writeFileSync(temporaryFile, output, { mode: 0o600 });
+  fs.chmodSync(temporaryFile, 0o600);
+  fs.chownSync(temporaryFile, process.getuid(), process.getgid());
+  fs.renameSync(temporaryFile, outputFile);
+  fs.chmodSync(outputFile, 0o600);
+} finally {
+  if (fs.existsSync(temporaryFile)) fs.unlinkSync(temporaryFile);
+}
+
+process.stdout.write('Updated protected Workspace MCP env; preserved existing credentials and applied ' + Object.keys(deviceConfig).length + ' device settings.\n');

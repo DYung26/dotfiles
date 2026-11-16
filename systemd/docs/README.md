@@ -9,7 +9,7 @@ All dotfiles-managed systemd units live in this package. Device differences are 
 - The local systemd.env selector is a symlink in the package configuration directory. The selector helper links it into ~/.config/dotfiles/systemd for systemd to read.
 - systemd.secrets.env is a local mode-0600 file in the package configuration directory for secrets that must be read directly by systemd units. It is ignored by Git, Stow and Syncthing. The helper links it into ~/.config/dotfiles/systemd. Do not put application-owned credentials here when those applications already have dedicated secret files or secret stores.
 
-Units load shared defaults first and the selected device profile second, so device values override shared defaults. Add the secrets file only to units that actually need its variables; do not expose every secret to every service. Existing app-specific secret files remain in their current locations.
+Units load shared defaults first and the selected device profile second, so device values override shared defaults. Add the secrets file only to units that actually need its variables; do not expose every secret to every service. Existing app-specific secret files remain in their current locations. Workspace MCP OAuth credentials stay in `~/Services/workspace-mcp/.env`; its helper merges only selected device settings into that existing file, preserves credentials and unrelated keys, and enforces mode 0600.
 
 ## Stow
 

@@ -120,7 +120,10 @@ A directory at the repository root is not automatically a package to install on 
 ## Systemd service policy
 
 - Long-running daemons should have an appropriate `Restart=on-failure` or `Restart=always`, a sensible `RestartSec`, and an `[Install]` target that matches the host/session.
-- `Type=oneshot` jobs should not be given daemon restart policies. Use a timer or an explicit dependency when a one-shot job must run again.
+- True `Type=oneshot` jobs can be enabled at boot through `WantedBy=` and use `Restart=on-failure` when a failed setup action should be retried. `RemainAfterExit=yes` keeps a successful job in `active (exited)` state. Do not use `Restart=always` for oneshots.
+- Periodic daemon-restart allowlists must skip true oneshot jobs. If a successful oneshot must run again after a dependency restarts, use an explicit timer or dependency rather than treating it as a daemon.
+- `echoprofile-login.service`, `echoprofile-maximize.service`, and `mt5-maximize.service` are intentional boot-time oneshot jobs; each is enabled at `default.target` and retries failures with `Restart=on-failure`. The Dotfiles user-service restart timer correctly skips them.
+- VPS system-level drop-ins in `systemd/etc/systemd/system/*.service.d/20-restart.conf` add restart-on-failure behavior to the active long-running `nginx`, `winbind`, `unattended-upgrades`, and `multipathd` daemons. D-Bus-activated/static services and timer-driven oneshots are not overridden.
 - Do not enable every unit on every device. Enable only the units intended for that device and preserve deliberate disabled states.
 - For each affected host, inspect `systemctl list-unit-files`, `is-enabled`, `status`, and relevant journals. Verify both boot enablement and runtime health.
 - Use `systemd-analyze verify` after editing units. Reload the correct manager after Stow.

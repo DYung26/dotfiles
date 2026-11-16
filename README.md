@@ -91,7 +91,7 @@ These are home-directory packages when the host uses them:
 - Shell and terminal: `bash-*`, `zsh`, `ble`, `starship`, `alacritty`, `wezterm`, `tmux`, `tmuxp`, `htop`.
 - Shared tools: `bin`, `git`, `ssh`, `nvim`, `stowrc`.
 - GitHub CLI: `gh` plus only the relevant `gh-<account>` profile packages. Account-specific `hosts.yml` files are local authentication state, not portable configuration.
-- Desktop integrations: `input-leap`, `input-leap-gui`, and `pulse` only on hosts that actually use those services.
+- Desktop integrations: `input-leap`, `input-leap-gui`, and `pulse` only on hosts that actually use those services. Omarchy's `hyprland` package contains only `~/.config/hypr/hyprland.lua`; it loads Omarchy's own defaults and the other personal modules remain Omarchy-managed local files.
 - MCP integrations: `mcp`, `mcp-shell-privileged`, `mcp-relay`, `metamcp-ops`, and `workspace-mcp` only on the hosts where their applications run. `mcp-relay` is currently documented as Ubuntu/VPS-only; keep its watcher timer disabled unless explicitly requested.
 - `cloudflared`: per-device configuration templates and local tunnel settings. Before editing, inspect the live unit and its drop-ins; a service may use an app-owned config path instead of the tracked template.
 

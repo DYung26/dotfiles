@@ -9,6 +9,9 @@ EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
 EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
 ExecStart=%h/Projects/dotfiles/systemd/bin/mt5-maximize-window
 RemainAfterExit=yes
+Restart=on-failure
+RestartSec=15s
+TimeoutStartSec=200
 
 [Install]
 WantedBy=default.target

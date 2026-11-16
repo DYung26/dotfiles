@@ -10,6 +10,8 @@ EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
 ExecStart=%h/Projects/dotfiles/systemd/bin/echoprofile-maximize-window
 TimeoutStartSec=200
 RemainAfterExit=yes
+Restart=on-failure
+RestartSec=15s
 
 [Install]
 WantedBy=default.target

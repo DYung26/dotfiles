@@ -11,6 +11,8 @@ ExecStartPre=/usr/bin/curl --fail --silent --show-error --retry 60 --retry-connr
 ExecStart=/usr/bin/env DISPLAY=${ECHOPROFILE_DISPLAY} WAYLAND_DISPLAY=${ECHOPROFILE_WAYLAND_DISPLAY} %h/.local/bin/echoprofile login
 TimeoutStartSec=180
 RemainAfterExit=yes
+Restart=on-failure
+RestartSec=15s
 
 [Install]
 WantedBy=default.target

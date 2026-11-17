@@ -22,9 +22,10 @@ Usage:
 Creates a disposable Codespace from a minimal launcher, transfers a sanitized
 snapshot of the local worktree (--workdir, default: current directory), runs the
 command in /workspaces/<repo>, collects logs/artifacts, and deletes the worker.
---repo is the GitHub project identity used for access validation and workspace
-naming; it does not fetch source from GitHub. Uncommitted and untracked local
-source changes are included. The VPS checkout remains authoritative.
+--repo identifies the project workspace directory name; it does not fetch
+source from GitHub or require access to the project repository. The selected
+account must access --launcher, which is used to create the Codespace. Local
+worktree source is uploaded directly, including uncommitted and untracked files.
 
 Options: --repo OWNER/REPO (required), --account ALIAS, --launcher OWNER/REPO,
 --machine NAME, --idle-timeout DURATION, --retention DURATION, --workdir PATH,
@@ -306,7 +307,6 @@ if ((dry)); then printf 'Account=%s\nLauncher=%s\nRepo=%s\nMachine=%s\nIdle=%s\n
 command -v gh >/dev/null || die 'gh CLI is required'
 ghx auth status >/dev/null 2>&1 || die 'selected gh profile is not authenticated'
 ghx repo view "$launcher" --json nameWithOwner >/dev/null || die "cannot access launcher $launcher"
-ghx repo view "$repo" --json nameWithOwner >/dev/null || die "cannot access project repo $repo"
 stamp="$(date -u +%Y%m%dT%H%M%SZ)-$RANDOM"; tmp="$(mktemp -d "$TMP_BASE/cs-burst.XXXXXX")"; out_dir="$workdir/artifacts/cs-burst-$stamp"; mkdir -p "$out_dir"; cs_name=''
 finish(){ rc=$?; trap - EXIT INT TERM; set +e; if [[ -n "$cs_name" ]]; then if ((keep_running)); then note "leaving Codespace running for temporary test use: $cs_name"; elif ((keep)); then ghx codespace stop -c "$cs_name" >/dev/null 2>&1; note "keeping stopped worker (storage still bills): $cs_name"; else ghx codespace stop -c "$cs_name" >/dev/null 2>&1; ghx codespace delete -c "$cs_name" -f >/dev/null 2>&1; fi; fi; rm -rf "$tmp"; note "run id: $stamp"; note "results: $out_dir"; exit "$rc"; }; trap finish EXIT INT TERM
 archive="$tmp/worktree.tar.gz"; snapshot="$tmp/snapshot"; mkdir -p "$snapshot"

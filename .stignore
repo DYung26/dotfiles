@@ -22,3 +22,6 @@ todo.md
 containers/mcp-proxy-shell
 /gh-*/.config/gh*/hosts.yml
 /gh/.config/gh/hosts.yml
+
+# Machine-local Skilljack source configuration; do not sync.
+skilljack/.skilljack/config.local.json

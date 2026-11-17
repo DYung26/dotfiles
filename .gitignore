@@ -339,3 +339,6 @@ systemd/.config/dotfiles/systemd/systemd.secrets.env
 !systemd/.local/
 !systemd/.local/bin/
 !systemd/.local/bin/chronix-api
+
+# Machine-local Skilljack source configuration; do not commit.
+skilljack/.skilljack/config.local.json

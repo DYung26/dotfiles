@@ -1,0 +1,8 @@
+{
+  "skillDirectories": ["/home/dyung/Projects/skills"],
+  "staticMode": false,
+  "skillInvocationOverrides": {},
+  "githubAllowedOrgs": [],
+  "githubAllowedUsers": [],
+  "wellKnownAllowedOrigins": []
+}

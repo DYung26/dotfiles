@@ -1,0 +1,23 @@
+[Unit]
+Description=AiSP session import bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/aisp/bridge.env
+WorkingDirectory=%h/Projects/aisp
+ExecStart=%h/Projects/aisp/target/release/aisp-bridge
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=%h/Projects
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=default.target

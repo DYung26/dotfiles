@@ -36,5 +36,6 @@ System-level units use explicit /home/dyung paths because %h in the system manag
 - Arch: enable EchoProfile under graphical-session.target; Playwright MCP, MCP services, Multica and applicable maintenance timers. MCP Relay and Pulse remain disabled until their missing configuration or socket conflict is resolved.
 - Omarchy: EchoProfile, Cloudflared, MCP shell proxy and shared maintenance timer.
 - VPS: EchoProfile and its VNC/WM/login stack, Playwright MCP endpoints, MT5, Agentation, Market Engine, GridWatch, Workspace MCP and applicable MCP services. MCP Relay remains disabled until its local environment is restored; the Hedging Dashboard API remains disabled until its backtest_engine import path is repaired.
+- AiSP bridge: enable `aisp-bridge.service` for the user on the VPS. Its unit is tracked in this package; app-owned runtime configuration remains in `~/.config/aisp/bridge.env` (mode 0600), not in Dotfiles. The service binds to the Tailscale interface and does not require a user-managed bearer token.
 
 The same unit files are deployed everywhere; only the selected device profile, optional local secrets, and enabled-unit links differ.

@@ -32,7 +32,11 @@
     "https://fly.io/.well-known/agent-skills/",
     "github.com/resend/resend-skills/skills"
   ],
-  "skillInvocationOverrides": {},
+  "skillInvocationOverrides": {
+    "skills__shell-execution-discipline": {
+      "assistant": true
+    }
+  },
   "staticMode": false,
   "githubAllowedOrgs": [
     "GoogleChrome",

@@ -1,0 +1,28 @@
+[Unit]
+Description=Workpulse project filesystem activity monitor
+After=default.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/dyung/Projects/workpulse
+Environment=PYTHONUNBUFFERED=1
+Environment=WORKPULSE_ROOT=/home/dyung/Projects
+Environment=WORKPULSE_HOST=127.0.0.1
+Environment=WORKPULSE_PORT=8773
+Environment=WORKPULSE_STATE_DIR=/home/dyung/.local/state/workpulse
+ExecStart=/usr/bin/python3 /home/dyung/Projects/workpulse/workpulse.py
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=8
+KillSignal=SIGINT
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/dyung/.local/state/workpulse
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LimitNOFILE=8192
+MemoryMax=280M
+
+[Install]
+WantedBy=default.target

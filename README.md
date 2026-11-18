@@ -103,6 +103,7 @@ These are home-directory packages when the host uses them:
 - `devcontainer`: copy into a target development repository as documented; do not Stow it into the home directory.
 - `networkmanager-wifi-reconnect`: archived; its README documents the historical setup. Do not install it as an active package.
 - `systemd`: special dual-target package described above.
+- `workpulse`: VPS-only, single-unit package for the Workpulse monitor. Stow it independently with `stow --no-folding --target="$HOME" workpulse`; do not stow the broader `systemd` package just to install this unit.
 
 A directory at the repository root is not automatically a package to install on every machine. Read its README and inspect its target paths first.
 

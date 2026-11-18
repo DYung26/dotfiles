@@ -3,6 +3,9 @@ Description=mcp-proxy bridge for mcp-shell (stdio -> streamable HTTP)
 After=network-online.target
 
 [Service]
+# mcp-shell starts detached job workers that must outlive proxy/server restarts.
+# The stdio child exits when the proxy closes its pipes; detached workers remain.
+KillMode=process
 LimitNOFILE=65536:524288
 Type=simple
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:%h/go/bin:%h/.cargo/bin

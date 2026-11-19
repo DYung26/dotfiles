@@ -133,3 +133,10 @@ if [ -f "$HOME/.config/mcp-relay/watcher-env" ]; then
   . "$HOME/.config/mcp-relay/watcher-env"
   set +a
 fi
+
+
+# Keep GPG pinentry attached to the current interactive SSH terminal.
+if [[ $- == *i* ]] && command -v gpg-connect-agent >/dev/null 2>&1; then
+  export GPG_TTY="$(tty 2>/dev/null || true)"
+  [[ -n "$GPG_TTY" ]] && gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true
+fi

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+health_url="${ECHOPROFILE_HEALTH_URL:?ECHOPROFILE_HEALTH_URL is required}"
+cli="$HOME/.local/bin/echoprofile"
+display_env=()
+if [[ -n "${ECHOPROFILE_DISPLAY:-}" ]]; then display_env+=("DISPLAY=$ECHOPROFILE_DISPLAY"); fi
+if [[ -n "${ECHOPROFILE_WAYLAND_DISPLAY:-}" ]]; then display_env+=("WAYLAND_DISPLAY=$ECHOPROFILE_WAYLAND_DISPLAY"); fi
+log() { printf '[%s] %s\n' "$(date --iso-8601=seconds)" "$*"; }
+while true; do
+  if ! curl --fail --silent "$health_url" >/dev/null 2>&1; then sleep 5; continue; fi
+  if env "${display_env[@]}" "$cli" persistent-status 2>/dev/null | grep -q '^open$'; then sleep 15; continue; fi
+  log 'Persistent browser is not open; requesting login.'
+  if env "${display_env[@]}" "$cli" login; then log 'Login request completed.'; else log 'Login failed; retrying in 10 seconds.'; sleep 10; fi
+done

@@ -1,0 +1,8 @@
+[Unit]
+Description=Start the GnuPG agent at user-session startup
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/gpgconf --launch gpg-agent
+RemainAfterExit=yes
+[Install]
+WantedBy=default.target

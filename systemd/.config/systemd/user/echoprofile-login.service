@@ -1,18 +1,15 @@
 [Unit]
-Description=Open the persistent EchoProfile Chromium session
-Requires=echoprofile.service echoprofile-wm.service echoprofile-vnc.service
-After=network-online.target echoprofile.service echoprofile-wm.service echoprofile-vnc.service
-
+Description=Keep the persistent EchoProfile Chromium session available
+Requires=echoprofile.service
+After=network-online.target echoprofile.service
+Wants=network-online.target
 [Service]
-Type=oneshot
+Type=simple
 EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
 EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
-ExecStartPre=/usr/bin/curl --fail --silent --show-error --retry 60 --retry-connrefused --retry-delay 1 ${ECHOPROFILE_HEALTH_URL}
-ExecStart=/usr/bin/env DISPLAY=${ECHOPROFILE_DISPLAY} WAYLAND_DISPLAY=${ECHOPROFILE_WAYLAND_DISPLAY} %h/.local/bin/echoprofile login
-TimeoutStartSec=180
-RemainAfterExit=yes
-Restart=on-failure
-RestartSec=15s
-
+ExecStart=%h/Projects/dotfiles/systemd/bin/echoprofile-login-watch
+Restart=always
+RestartSec=5
+TimeoutStartSec=0
 [Install]
 WantedBy=default.target

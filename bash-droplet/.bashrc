@@ -122,4 +122,8 @@ export NVM_DIR="$HOME/.nvm"
 . "$HOME/.cargo/env"
 
 . "$HOME/.local/bin/env"
-export GPG_TTY=$(tty)
+# Attach GPG pinentry to the current interactive SSH terminal.
+if command -v gpg-connect-agent >/dev/null 2>&1; then
+  export GPG_TTY="$(tty 2>/dev/null || true)"
+  [[ -n "$GPG_TTY" ]] && gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true
+fi

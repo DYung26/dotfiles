@@ -18,6 +18,8 @@ while ($true) {
   $status = (& $exe persistent-status 2>&1 | Out-String).Trim()
   if ($LASTEXITCODE -eq 0 -and $status -match '^open') { Start-Sleep -Seconds 15; continue }
   Add-Content $log "[$(Get-Date -Format o)] Persistent browser is closed; requesting login."
-  & $exe login *>> $log
-  if ($LASTEXITCODE -ne 0) { Add-Content $log "[$(Get-Date -Format o)] Login failed; retrying in 10 seconds."; Start-Sleep -Seconds 10 }
+  $loginOutput = (& $exe login 2>&1 | Out-String)
+  $loginExitCode = $LASTEXITCODE
+  [IO.File]::AppendAllText($log, $loginOutput + [Environment]::NewLine, [Text.UTF8Encoding]::new($false))
+  if ($loginExitCode -ne 0) { Add-Content $log "[$(Get-Date -Format o)] Login failed; retrying in 10 seconds."; Start-Sleep -Seconds 10 }
 }

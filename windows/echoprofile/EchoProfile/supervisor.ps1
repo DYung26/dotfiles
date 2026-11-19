@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Continue'
 $root = Join-Path $env:LOCALAPPDATA 'EchoProfile'
 $log = Join-Path $root 'serve.log'
 $exe = Join-Path $env:USERPROFILE '.local\bin\echoprofile.exe'
@@ -12,18 +12,15 @@ $env:ECHOPROFILE_EXTRA_EXTENSION_DIRS = (Join-Path $env:LOCALAPPDATA 'EchoProfil
 $env:ECHOPROFILE_NO_RELOAD = '1'
 $env:ECHOPROFILE_AUTO_FALLBACK = 'false'
 $env:ECHOPROFILE_CDP_PORT = '9222'
-$mutex = [System.Threading.Mutex]::new($false, 'Global\EchoProfileSupervisor')
-if (-not $mutex.WaitOne(0)) { exit 0 }
-try {
-  while ($true) {
-    while (-not (Get-NetIPAddress -IPAddress '100.98.45.0' -ErrorAction SilentlyContinue)) { Start-Sleep -Seconds 5 }
-    Add-Content -Path $log -Value ("[" + (Get-Date -Format o) + "] Starting EchoProfile")
-    $cmdArgs = '/d /s /c ""' + $exe + '" serve >> "' + $log + '" 2>&1"'
-    $p = Start-Process -FilePath $env:ComSpec -ArgumentList $cmdArgs -PassThru -Wait -WindowStyle Hidden
-    Add-Content -Path $log -Value ("[" + (Get-Date -Format o) + "] EchoProfile exited with code " + $p.ExitCode + "; retrying in 10 seconds")
-    Start-Sleep -Seconds 10
-  }
-} finally {
-  $mutex.ReleaseMutex()
-  $mutex.Dispose()
+while ($true) {
+  while (-not (Get-NetIPAddress -IPAddress '100.98.45.0' -ErrorAction SilentlyContinue)) { Start-Sleep -Seconds 5 }
+  try {
+    $health = Invoke-RestMethod -Uri 'http://100.98.45.0:8756/health' -TimeoutSec 2 -ErrorAction Stop
+    if ($health.status -eq 'ok') { Start-Sleep -Seconds 5; continue }
+  } catch { }
+  Add-Content -Path $log -Value ("[" + (Get-Date -Format o) + "] Starting EchoProfile")
+  $cmdArgs = '/d /s /c ""' + $exe + '" serve >> "' + $log + '" 2>&1"'
+  $p = Start-Process -FilePath $env:ComSpec -ArgumentList $cmdArgs -PassThru -Wait -WindowStyle Hidden
+  Add-Content -Path $log -Value ("[" + (Get-Date -Format o) + "] EchoProfile exited with code " + $p.ExitCode + "; retrying in 10 seconds")
+  Start-Sleep -Seconds 10
 }

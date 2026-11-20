@@ -1,189 +1,441 @@
 #!/usr/bin/env bash
-# tmux-switcher.sh
-#
-# Level 1 (default): one compact line per repo. Fuzzy search filters by
-# repo name. A repo's tmux session is named after the repo itself unless
-# session-names.conf maps it to a different, already-existing session name
-# (see session_name_for_repo).
-#   Enter -> jump into that session (its current window), creating the
-#            session on the repo's default-branch worktree first if it
-#            doesn't exist yet.
-#   Tab   -> drill into that repo: a second fuzzy list of its exact open
-#            windows plus any not-yet-opened worktrees, tagged [open]/[new].
-#            Esc from here returns to the level-1 list instead of closing.
-#
-# Windows only ever correspond to an actual worktree path: the repo's
-# primary checkout (named after its real default branch, e.g. main/develop)
-# if that path exists, plus one per directory under <repo>.wt/. A branch
-# with no worktree never gets a window.
-#
+# Level 1 lists repositories and standalone sessions. Enter switches to a
+# session (creating a repo session on its primary checkout when needed); Tab
+# opens that repo's registered worktrees. Esc returns to level 1 with query kept.
+# Windows are identified by canonical checkout path. Grove aliases under
+# <repo>.wt retain their names; other worktrees use branch names. Unregistered
+# and prunable worktrees are excluded. session-names.conf overrides repo sessions.
 set -euo pipefail
-if [ -n "${TMUX_SWITCHER_PROJECTS_DIR:-}" ]; then
-  PROJECTS_DIR="$TMUX_SWITCHER_PROJECTS_DIR"
-elif [ -d "/workspaces" ]; then
-  PROJECTS_DIR="/workspaces"
-else
-  PROJECTS_DIR="$HOME/Projects"
-fi
-DOTFILES_DIR="${TMUX_SWITCHER_DOTFILES_DIR:-$PROJECTS_DIR/dotfiles}"
-SESSION_NAMES_CONF="$DOTFILES_DIR/tmux/.tmux/session-names.conf"
 
-default_branch_window_name() { # repo -> window name for the primary checkout, or empty if none
-  local repo="$1"
-  local repo_path="$PROJECTS_DIR/$repo"
-  [ -d "$repo_path/.git" ] || [ -f "$repo_path/.git" ] || return 0
-  local branch
-  branch=$(git -C "$repo_path" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##') || true
-  if [ -z "$branch" ]; then
-    branch=$(git -C "$repo_path" branch --show-current 2>/dev/null) || true
-  fi
-  echo "$branch"
+if [[ -n "${TMUX_SWITCHER_PROJECTS_DIR:-}" ]]; then
+  PROJECTS_DIR=$TMUX_SWITCHER_PROJECTS_DIR
+elif [[ -d /workspaces ]]; then
+  PROJECTS_DIR=/workspaces
+else
+  PROJECTS_DIR=$HOME/Projects
+fi
+
+DOTFILES_DIR=${TMUX_SWITCHER_DOTFILES_DIR:-$PROJECTS_DIR/dotfiles}
+SESSION_NAMES_CONF=$DOTFILES_DIR/tmux/.tmux/session-names.conf
+
+declare -a WORKTREE_NAMES=()
+declare -a WORKTREE_PATHS=()
+declare -A WORKTREE_ALIAS_NAMES=()
+declare -a LEVEL1_KINDS=()
+declare -a LEVEL1_VALUES=()
+declare -a LEVEL1_LABELS=()
+
+error() {
+  printf 'tmux switcher: %s\n' "$*" >&2
+  tmux display-message -d 5000 "tmux switcher: $*" 2>/dev/null || true
+  return 1
 }
 
-list_worktrees() { # repo -> newline list of window names, one per existing worktree path only
-  local repo="$1"
-  local wt_dir="$PROJECTS_DIR/${repo}.wt"
-  local default_name
-  default_name=$(default_branch_window_name "$repo")
-  if [ -n "$default_name" ]; then
-    echo "$default_name"
+session_name_for_repo() {
+  local repo=$1
+  local mapped=
+
+  if [[ -f $SESSION_NAMES_CONF ]]; then
+    mapped=$(awk -F= -v repo="$repo" '$1 == repo { print substr($0, index($0, "=") + 1); exit }' "$SESSION_NAMES_CONF")
   fi
-  if [ -d "$wt_dir" ]; then
-    for w in "$wt_dir"/*; do
-      [ -d "$w" ] || continue
-      basename "$w"
+
+  printf '%s\n' "${mapped:-$repo}"
+}
+
+default_branch_window_name() {
+  local repo=$1
+  local repo_path=$PROJECTS_DIR/$repo
+  local branch=
+
+  [[ -d $repo_path/.git || -f $repo_path/.git ]] || return 1
+
+  branch=$(git -C "$repo_path" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)
+  branch=${branch#origin/}
+
+  if [[ -z $branch ]]; then
+    branch=$(git -C "$repo_path" branch --show-current 2>/dev/null || true)
+  fi
+
+  if [[ -z $branch ]]; then
+    branch="detached-$(git -C "$repo_path" rev-parse --short HEAD 2>/dev/null || printf 'primary')"
+  fi
+
+  printf '%s\n' "$branch"
+}
+
+append_worktree_entry() {
+  local repo=$1
+  local repo_path=$2
+  local path=$3
+  local branch=$4
+  local head=$5
+  local canonical name
+
+  [[ -n $path && -d $path ]] || return 0
+  canonical=$(realpath -e -- "$path") || return 0
+
+  if [[ $canonical == "$repo_path" ]]; then
+    name=$(default_branch_window_name "$repo") || return 1
+  elif [[ -n ${WORKTREE_ALIAS_NAMES[$canonical]:-} ]]; then
+    name=${WORKTREE_ALIAS_NAMES[$canonical]}
+  elif [[ -n $branch ]]; then
+    name=$branch
+  elif [[ -n $head ]]; then
+    name="detached-${head:0:8}-$(basename "$path")"
+  else
+    name=$(basename "$path")
+  fi
+
+  WORKTREE_NAMES+=("$name")
+  WORKTREE_PATHS+=("$canonical")
+}
+
+sort_worktree_entries() {
+  local index entry
+  local -a entries=() names=() paths=()
+
+  mapfile -t entries < <(
+    for index in "${!WORKTREE_NAMES[@]}"; do
+      printf '%s\037%s\n' "${WORKTREE_NAMES[$index]}" "$index"
+    done | sort -t $'\037' -k1,1
+  )
+
+  for entry in "${entries[@]}"; do
+    index=${entry##*$'\037'}
+    names+=("${WORKTREE_NAMES[$index]}")
+    paths+=("${WORKTREE_PATHS[$index]}")
+  done
+
+  WORKTREE_NAMES=("${names[@]}")
+  WORKTREE_PATHS=("${paths[@]}")
+}
+
+load_worktrees() {
+  local repo=$1
+  local repo_path=$PROJECTS_DIR/$repo
+  local canonical_repo_path field record_path branch head prunable
+  local worktree_dir alias alias_name alias_path
+
+  WORKTREE_NAMES=()
+  WORKTREE_PATHS=()
+  WORKTREE_ALIAS_NAMES=()
+
+  [[ -d $repo_path/.git || -f $repo_path/.git ]] || return 1
+  canonical_repo_path=$(realpath -e -- "$repo_path") || return 1
+  worktree_dir=$PROJECTS_DIR/${repo}.wt
+
+  if [[ -d $worktree_dir ]]; then
+    for alias in "$worktree_dir"/*; do
+      [[ -d $alias ]] || continue
+      alias_name=$(basename "$alias")
+      case $alias_name in
+        *.grove-bak|.stfolder) continue ;;
+      esac
+      alias_path=$(realpath -e -- "$alias" 2>/dev/null || true)
+      [[ -n $alias_path ]] || continue
+      [[ -n ${WORKTREE_ALIAS_NAMES[$alias_path]:-} ]] || WORKTREE_ALIAS_NAMES["$alias_path"]=$alias_name
     done
   fi
-}
 
-worktree_path() { # repo name, window name -> filesystem path
-  local repo="$1" name="$2"
-  local default_name
-  default_name=$(default_branch_window_name "$repo")
-  if [ -n "$default_name" ] && [ "$name" = "$default_name" ]; then
-    echo "$PROJECTS_DIR/$repo"
-  else
-    echo "$PROJECTS_DIR/${repo}.wt/${name}"
-  fi
-}
+  record_path=
+  branch=
+  head=
+  prunable=0
 
-session_name_for_repo() { # repo -> configured session name, or repo itself
-  local repo="$1"
-  [ -f "$SESSION_NAMES_CONF" ] || { echo "$repo"; return; }
-  local mapped
-  mapped=$(grep -m1 "^${repo}=" "$SESSION_NAMES_CONF" | cut -d= -f2-)
-  [ -n "$mapped" ] && echo "$mapped" || echo "$repo"
-}
-
-jump_to_window() { # repo, worktree/window name -> creates if needed, switches
-  local repo="$1" name="$2"
-  local session; session=$(session_name_for_repo "$repo")
-  if tmux has-session -t "$session" 2>/dev/null \
-      && tmux list-windows -t "$session" -F '#{window_name}' | grep -qx "$name"; then
-    tmux switch-client -t "${session}:${name}"
-    return
-  fi
-  local path; path=$(worktree_path "$repo" "$name")
-  if ! tmux has-session -t "$session" 2>/dev/null; then
-    tmux new-session -d -s "$session" -n "$name" -c "$path" 'nvim'
-  else
-    tmux new-window -t "$session" -n "$name" -c "$path" 'nvim'
-  fi
-  tmux switch-client -t "${session}:${name}"
-}
-
-drill_repo() { # level 2: pick an exact window/worktree for one repo
-  # returns 1 (picks nothing) on Esc, so the caller can go back to level 1
-  local repo="$1"
-  local session; session=$(session_name_for_repo "$repo")
-  local open_windows
-  open_windows=$(tmux list-windows -t "$session" -F '#{window_name}' 2>/dev/null || true)
-  local lines=""
-  local w tag
-  while IFS= read -r w; do
-    [ -z "$w" ] && continue
-    if echo "$open_windows" | grep -qx "$w"; then
-      tag="open"
-    else
-      tag="new"
+  while IFS= read -r -d '' field; do
+    if [[ -z $field ]]; then
+      if [[ -n $record_path && $prunable == 0 ]]; then
+        append_worktree_entry "$repo" "$canonical_repo_path" "$record_path" "$branch" "$head"
+      fi
+      record_path=
+      branch=
+      head=
+      prunable=0
+      continue
     fi
-    lines="${lines}${w}  [${tag}]
-"
-  done < <(list_worktrees "$repo")
 
-  local pick
-  pick=$(printf '%s' "$lines" | sort -u | fzf --reverse --cycle \
-    --header "${repo}: pick a window/worktree  (Esc: back)" | awk '{print $1}')
-  if [ -z "$pick" ]; then
-    return 1
+    case $field in
+      "worktree "*) record_path=${field#worktree } ;;
+      "branch "*) branch=${field#branch refs/heads/} ;;
+      "HEAD "*) head=${field#HEAD } ;;
+      prunable*) prunable=1 ;;
+    esac
+  done < <(git -C "$repo_path" worktree list --porcelain -z)
+
+  if [[ -n $record_path && $prunable == 0 ]]; then
+    append_worktree_entry "$repo" "$canonical_repo_path" "$record_path" "$branch" "$head"
   fi
-  jump_to_window "$repo" "$pick"
-  return 0
+  sort_worktree_entries
 }
 
-build_level1() { # one line per repo (with or without a .wt dir), then any other live session not already covered by a repo
-  local repo_dir repo session
+# Psmux stores @options at session scope, so key each value by both IDs.
+worktree_window_option_name() {
+  local session_id=$1
+  local window_id=$2
+
+  [[ -n $session_id && -n $window_id ]] || return 1
+  session_id=${session_id//[^[:alnum:]_]/_}
+  window_id=${window_id//[^[:alnum:]_]/_}
+  printf '@tmux_switcher_worktree_path_%s_%s' "$session_id" "$window_id"
+}
+
+find_window_for_worktree() {
+  local session=$1
+  local name=$2
+  local path=$3
+  local window_id session_id option stored_path current_name current_path
+
+  while IFS='|' read -r window_id session_id; do
+    option=$(worktree_window_option_name "$session_id" "$window_id") || continue
+    stored_path=$(tmux show-options -g -q -v "$option" 2>/dev/null || true)
+
+    if [[ $stored_path == "$path" ]]; then
+      printf '%s' "$window_id"
+      return 0
+    fi
+
+    if [[ -z $stored_path || ! -d $stored_path ]]; then
+      current_name=$(tmux display-message -p -t "$window_id" '#{window_name}' 2>/dev/null || true)
+      current_path=$(tmux display-message -p -t "$window_id" '#{pane_current_path}' 2>/dev/null || true)
+      current_path=$(realpath -e -- "$current_path" 2>/dev/null || true)
+
+      if [[ $current_name == "$name" && ( $current_path == "$path" || $current_path == "$path"/* ) ]]; then
+        tmux set-option -g "$option" "$path" 2>/dev/null || true
+        printf '%s' "$window_id"
+        return 0
+      fi
+    fi
+  done < <(tmux list-windows -t "=$session" -F '#{window_id}|#{session_id}' 2>/dev/null)
+  return 1
+}
+
+switch_to_window() {
+  local session=$1
+  local window_id=$2
+
+  tmux select-window -t "$session:$window_id" || return 1
+  tmux switch-client -t "$session"
+}
+
+switch_to_worktree() {
+  local repo=$1
+  local name=$2
+  local path=$3
+  local session window_id session_id option
+  local session_exists=0
+
+  [[ -d $path ]] || { error "Worktree no longer exists: $path"; return 1; }
+  path=$(realpath -e -- "$path") || { error "Could not resolve worktree path: $path"; return 1; }
+  session=$(session_name_for_repo "$repo")
+
+  if tmux has-session -t "=$session" 2>/dev/null; then
+    session_exists=1
+    if window_id=$(find_window_for_worktree "$session" "$name" "$path"); then
+      switch_to_window "$session" "$window_id"
+      return
+    fi
+  fi
+
+  command -v nvim >/dev/null 2>&1 || { error "nvim is required to open a new worktree window"; return 1; }
+
+  if ((session_exists)); then
+    window_id=$(tmux new-window -d -P -F '#{window_id}' -t "=$session" -n "$name" -c "$path" nvim) || {
+      error "Could not create a window for $repo/$name"
+      return 1
+    }
+  else
+    window_id=$(tmux new-session -d -P -F '#{window_id}' -s "$session" -n "$name" -c "$path" nvim) || {
+      if tmux has-session -t "=$session" 2>/dev/null; then
+        window_id=$(tmux new-window -d -P -F '#{window_id}' -t "=$session" -n "$name" -c "$path" nvim) || {
+          error "Could not create a window for $repo/$name"
+          return 1
+        }
+      else
+        error "Could not create tmux session $session"
+        return 1
+      fi
+    }
+  fi
+
+  [[ -n $window_id ]] || { error "tmux did not return a window ID for $repo/$name"; return 1; }
+  session_id=$(tmux display-message -p -t "$window_id" '#{session_id}') || {
+    error "Could not identify the session for $repo/$name"
+    return 1
+  }
+  option=$(worktree_window_option_name "$session_id" "$window_id") || {
+    error "Could not identify the window for $repo/$name"
+    return 1
+  }
+  tmux set-option -g "$option" "$path" || {
+    error "Could not record the worktree path for $repo/$name"
+    return 1
+  }
+  switch_to_window "$session" "$window_id"
+}
+
+append_level1_entry() {
+  LEVEL1_KINDS+=("$1")
+  LEVEL1_VALUES+=("$2")
+  LEVEL1_LABELS+=("$3")
+}
+
+sort_level1_entries() {
+  local index entry
+  local -a entries=() kinds=() values=() labels=()
+
+  mapfile -t entries < <(
+    for index in "${!LEVEL1_LABELS[@]}"; do
+      printf '%s\037%s\n' "${LEVEL1_LABELS[$index]}" "$index"
+    done | sort -t $'\037' -k1,1
+  )
+
+  for entry in "${entries[@]}"; do
+    index=${entry##*$'\037'}
+    kinds+=("${LEVEL1_KINDS[$index]}")
+    values+=("${LEVEL1_VALUES[$index]}")
+    labels+=("${LEVEL1_LABELS[$index]}")
+  done
+
+  LEVEL1_KINDS=("${kinds[@]}")
+  LEVEL1_VALUES=("${values[@]}")
+  LEVEL1_LABELS=("${labels[@]}")
+}
+
+build_level1() {
+  local repo_dir repo session live label
   local -A claimed_sessions=()
+
+  LEVEL1_KINDS=()
+  LEVEL1_VALUES=()
+  LEVEL1_LABELS=()
+
   for repo_dir in "$PROJECTS_DIR"/*/; do
-    repo_dir="${repo_dir%/}"
-    [ -d "$repo_dir" ] || continue
-    case "$repo_dir" in
-      *.wt) continue ;; # worktree container, not a selectable repo on its own
-    esac
-    [ -d "$repo_dir/.git" ] || [ -f "$repo_dir/.git" ] || continue
+    [[ -d $repo_dir ]] || continue
+    repo_dir=${repo_dir%/}
+    [[ -d $repo_dir/.git || -f $repo_dir/.git ]] || continue
+
     repo=$(basename "$repo_dir")
     session=$(session_name_for_repo "$repo")
     claimed_sessions["$session"]=1
-    if tmux has-session -t "$session" 2>/dev/null; then
-      echo "$repo"
+
+    if tmux has-session -t "=$session" 2>/dev/null; then
+      label=$repo
     else
-      echo "${repo} (new)"
+      label="$repo (new)"
     fi
+
+    append_level1_entry repo "$repo" "$label"
   done
-  local live
+
   while IFS= read -r live; do
-    [ -z "$live" ] && continue
-    [ -n "${claimed_sessions[$live]:-}" ] && continue
-    echo "$live"
+    [[ -n $live ]] || continue
+    [[ -n ${claimed_sessions[$live]:-} ]] && continue
+    append_level1_entry session "$live" "$live"
   done < <(tmux list-sessions -F '#{session_name}' 2>/dev/null || true)
+
+  sort_level1_entries
 }
 
-is_known_repo() { # repo name -> 0 if it has a matching directory under Projects/, 1 otherwise
-  local repo="$1"
-  local repo_path="$PROJECTS_DIR/$repo"
-  { [ -d "$repo_path/.git" ] || [ -f "$repo_path/.git" ]; } && [ -d "$repo_path" ]
+select_level1_entry() {
+  local query=$1
+  local result
+  local -a response=()
+  local index
+
+  result=$(
+    for index in "${!LEVEL1_LABELS[@]}"; do
+      printf '%s:%s\n' "$index" "${LEVEL1_LABELS[$index]}"
+    done | fzf --reverse --cycle --delimiter=: --with-nth=2.. --accept-nth=1 \
+      --expect=tab --query "$query" --print-query \
+      --header 'Enter: switch  |  Tab: choose worktree'
+  ) || true
+
+  mapfile -t response <<< "$result"
+  SELECTED_QUERY=${response[0]-$query}
+  SELECTED_KEY=${response[1]-}
+  SELECTED_INDEX=${response[2]-}
 }
 
-query=""
-while true; do
-  result=$(build_level1 | sort -u | fzf --reverse --cycle --expect=tab \
-    --query "$query" --print-query \
-    --header 'Enter: jump in  |  Tab: pick exact window/worktree') || true
-
-  query=$(printf '%s' "$result" | sed -n 1p)
-  key=$(printf '%s' "$result" | sed -n 2p)
-  line=$(printf '%s' "$result" | sed -n 3p)
-  [ -z "$line" ] && exit 0
-  repo="${line% (new)}"
-
-  if [ "$key" = "tab" ]; then
-    if ! is_known_repo "$repo"; then
-      continue # no worktree structure to drill into; Tab is a no-op here
-    fi
-    if drill_repo "$repo"; then
-      exit 0
-    else
-      continue # Esc'd out of the drill-down; back to the session list, query preserved
-    fi
-  fi
+select_worktree() {
+  local repo=$1
+  local session index name path label window_id result
+  local -a response=()
 
   session=$(session_name_for_repo "$repo")
-  if tmux has-session -t "$session" 2>/dev/null; then
-    tmux switch-client -t "$session"
-    exit 0
-  else
-    default_name=$(default_branch_window_name "$repo")
-    jump_to_window "$repo" "${default_name:-main}"
-    exit 0
+  load_worktrees "$repo" || { error "Could not inspect worktrees for $repo"; return 1; }
+
+  if ((${#WORKTREE_NAMES[@]} == 0)); then
+    error "No checkout or worktrees found for $repo"
+    return 1
   fi
-done
+
+  result=$(
+    for index in "${!WORKTREE_NAMES[@]}"; do
+      name=${WORKTREE_NAMES[$index]}
+      path=${WORKTREE_PATHS[$index]}
+      if window_id=$(find_window_for_worktree "$session" "$name" "$path"); then
+        label="$name  [open]"
+      else
+        label="$name  [new]"
+      fi
+      printf '%s:%s\n' "$index" "$label"
+    done | fzf --reverse --cycle --delimiter=: --with-nth=2.. --accept-nth=1 \
+      --print-query --header "$repo: choose a checkout/worktree  (Esc: back)"
+  ) || true
+
+  mapfile -t response <<< "$result"
+  index=${response[1]-}
+  [[ $index =~ ^[0-9]+$ ]] || return 1
+  ((index < ${#WORKTREE_NAMES[@]})) || return 1
+
+  switch_to_worktree "$repo" "${WORKTREE_NAMES[$index]}" "${WORKTREE_PATHS[$index]}"
+}
+
+main() {
+  local query=
+  local index repo session primary_name primary_path
+
+  [[ -d $PROJECTS_DIR ]] || { error "Projects directory not found: $PROJECTS_DIR"; return 1; }
+  local dependency
+  for dependency in fzf git realpath basename awk sort; do
+    command -v "$dependency" >/dev/null 2>&1 || { error "$dependency is required but was not found in PATH"; return 1; }
+  done
+
+  while true; do
+    build_level1
+    select_level1_entry "$query"
+    query=$SELECTED_QUERY
+
+    [[ $SELECTED_INDEX =~ ^[0-9]+$ ]] || return 0
+    ((SELECTED_INDEX < ${#LEVEL1_KINDS[@]})) || return 0
+
+    index=$SELECTED_INDEX
+    repo=${LEVEL1_VALUES[$index]}
+    session=$(session_name_for_repo "$repo")
+
+    if [[ $SELECTED_KEY == tab ]]; then
+      [[ ${LEVEL1_KINDS[$index]} == repo ]] || continue
+      select_worktree "$repo" || continue
+      return
+    fi
+
+    if [[ ${LEVEL1_KINDS[$index]} == session ]]; then
+      tmux switch-client -t "=$session"
+      return
+    fi
+
+    if tmux has-session -t "=$session" 2>/dev/null; then
+      tmux switch-client -t "=$session"
+      return
+    fi
+
+    primary_name=$(default_branch_window_name "$repo") || { error "Could not determine the primary checkout for $repo"; return 1; }
+    primary_path=$(realpath -e -- "$PROJECTS_DIR/$repo") || { error "Primary checkout no longer exists for $repo"; return 1; }
+    switch_to_worktree "$repo" "$primary_name" "$primary_path"
+    return
+  done
+}
+
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+  main "$@"
+fi

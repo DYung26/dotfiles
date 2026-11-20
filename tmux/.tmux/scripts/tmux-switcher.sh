@@ -345,7 +345,7 @@ select_level1_entry() {
   result=$(
     for index in "${!LEVEL1_LABELS[@]}"; do
       printf '%s:%s\n' "$index" "${LEVEL1_LABELS[$index]}"
-    done | fzf --reverse --cycle --delimiter=: --with-nth=2.. --accept-nth=1 \
+    done | fzf --reverse --cycle --delimiter=: --with-nth=2.. \
       --expect=tab --query "$query" --print-query \
       --header 'Enter: switch  |  Tab: choose worktree'
   ) || true
@@ -354,6 +354,7 @@ select_level1_entry() {
   SELECTED_QUERY=${response[0]-$query}
   SELECTED_KEY=${response[1]-}
   SELECTED_INDEX=${response[2]-}
+  SELECTED_INDEX=${SELECTED_INDEX%%:*}
 }
 
 select_worktree() {
@@ -379,12 +380,13 @@ select_worktree() {
         label="$name  [new]"
       fi
       printf '%s:%s\n' "$index" "$label"
-    done | fzf --reverse --cycle --delimiter=: --with-nth=2.. --accept-nth=1 \
+    done | fzf --reverse --cycle --delimiter=: --with-nth=2.. \
       --print-query --header "$repo: choose a checkout/worktree  (Esc: back)"
   ) || true
 
   mapfile -t response <<< "$result"
   index=${response[1]-}
+  index=${index%%:*}
   [[ $index =~ ^[0-9]+$ ]] || return 1
   ((index < ${#WORKTREE_NAMES[@]})) || return 1
 

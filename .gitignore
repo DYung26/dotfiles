@@ -345,3 +345,6 @@ skilljack/.skilljack/config.local.json
 
 # AiSP shared environment contains machine-local settings and credentials.
 aisp/.config/aisp/aisp.env
+
+# BURST provider credentials (local-only; Stow links this into ~/.config).
+burst-systemd/.config/burst/providers.env

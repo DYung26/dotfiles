@@ -14,4 +14,4 @@ docs/_local
 
 # Local project agent instructions and project-scoped resources.
 AGENTS.md
-agents/
+/agents/

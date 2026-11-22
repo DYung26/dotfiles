@@ -25,3 +25,6 @@ containers/mcp-proxy-shell
 
 # Machine-local Skilljack source configuration; do not sync.
 skilljack/.skilljack/config.local.json
+
+// Local BURST provider credentials; never sync secrets between devices.
+burst-systemd/.config/burst/providers.env

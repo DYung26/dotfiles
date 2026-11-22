@@ -21,6 +21,16 @@ SESSION_NAMES_CONF=$DOTFILES_DIR/tmux/.tmux/session-names.conf
 declare -a WORKTREE_NAMES=()
 declare -a WORKTREE_PATHS=()
 declare -A WORKTREE_ALIAS_NAMES=()
+declare -A SESSION_NAME_OVERRIDES=()
+declare -A ACTIVE_SESSIONS=()
+declare -A TMUX_WORKTREE_WINDOW_PATHS=()
+declare -A TMUX_WORKTREE_WINDOW_BY_PATH=()
+declare -a TMUX_WINDOW_IDS=()
+declare -a TMUX_WINDOW_SESSION_IDS=()
+declare -a TMUX_WINDOW_SESSION_NAMES=()
+declare -a TMUX_WINDOW_NAMES=()
+declare -a TMUX_WINDOW_CANONICAL_PATHS=()
+TMUX_WINDOW_SNAPSHOT_LOADED=0
 declare -a LEVEL1_KINDS=()
 declare -a LEVEL1_VALUES=()
 declare -a LEVEL1_LABELS=()
@@ -31,15 +41,27 @@ error() {
   return 1
 }
 
+load_session_name_overrides() {
+  local line repo mapped
+
+  SESSION_NAME_OVERRIDES=()
+  [[ -f $SESSION_NAMES_CONF ]] || return 0
+
+  while IFS= read -r line || [[ -n $line ]]; do
+    line=${line%$'\r'}
+    [[ $line =~ ^[[:space:]]*(#|$) ]] && continue
+    [[ $line == *=* ]] || continue
+
+    repo=${line%%=*}
+    mapped=${line#*=}
+    [[ -n $repo && -n $mapped ]] || continue
+    [[ -n ${SESSION_NAME_OVERRIDES[$repo]:-} ]] || SESSION_NAME_OVERRIDES["$repo"]=$mapped
+  done < "$SESSION_NAMES_CONF"
+}
+
 session_name_for_repo() {
   local repo=$1
-  local mapped=
-
-  if [[ -f $SESSION_NAMES_CONF ]]; then
-    mapped=$(awk -F= -v repo="$repo" '$1 == repo { print substr($0, index($0, "=") + 1); exit }' "$SESSION_NAMES_CONF")
-  fi
-
-  printf '%s\n' "${mapped:-$repo}"
+  printf '%s\n' "${SESSION_NAME_OVERRIDES[$repo]:-$repo}"
 }
 
 default_branch_window_name() {
@@ -81,9 +103,9 @@ append_worktree_entry() {
   elif [[ -n $branch ]]; then
     name=$branch
   elif [[ -n $head ]]; then
-    name="detached-${head:0:8}-$(basename "$path")"
+    name="detached-${head:0:8}-${path##*/}"
   else
-    name=$(basename "$path")
+    name=${path##*/}
   fi
 
   WORKTREE_NAMES+=("$name")
@@ -127,7 +149,7 @@ load_worktrees() {
   if [[ -d $worktree_dir ]]; then
     for alias in "$worktree_dir"/*; do
       [[ -d $alias ]] || continue
-      alias_name=$(basename "$alias")
+      alias_name=${alias##*/}
       case $alias_name in
         *.grove-bak|.stfolder) continue ;;
       esac
@@ -179,33 +201,99 @@ worktree_window_option_name() {
   printf '@tmux_switcher_worktree_path_%s_%s' "$session_id" "$window_id"
 }
 
+load_tmux_window_snapshot() {
+  local option value suffix window_id session_id session_name name current_path canonical_current_path stored_path key
+  local separator=$'\037' format
+
+  TMUX_WORKTREE_WINDOW_PATHS=()
+  TMUX_WORKTREE_WINDOW_BY_PATH=()
+  TMUX_WINDOW_IDS=()
+  TMUX_WINDOW_SESSION_IDS=()
+  TMUX_WINDOW_SESSION_NAMES=()
+  TMUX_WINDOW_NAMES=()
+  TMUX_WINDOW_CANONICAL_PATHS=()
+
+  # Fetch recorded paths and windows once instead of spawning tmux for every
+  # worktree/window pair.
+  while IFS='|' read -r option value; do
+    [[ $option == @tmux_switcher_worktree_path_* ]] || continue
+    suffix=${option#@tmux_switcher_worktree_path_}
+    TMUX_WORKTREE_WINDOW_PATHS["$suffix"]=$value
+  done < <(tmux show-options -g -F '#{option_name}|#{option_value}' 2>/dev/null || true)
+
+  # A control-character separator prevents names containing pipes from
+  # shifting the metadata columns.
+  format="#{window_id}${separator}#{session_id}${separator}#{session_name}${separator}#{window_name}${separator}#{pane_current_path}"
+  while IFS=$'\037' read -r window_id session_id session_name name current_path; do
+    [[ -n $window_id ]] || continue
+
+    option=$(worktree_window_option_name "$session_id" "$window_id") || continue
+    suffix=${option#@tmux_switcher_worktree_path_}
+    stored_path=${TMUX_WORKTREE_WINDOW_PATHS[$suffix]:-}
+    if [[ -n $stored_path && -d $stored_path ]]; then
+      canonical_current_path=
+    else
+      canonical_current_path=$(realpath -e -- "$current_path" 2>/dev/null || true)
+    fi
+
+    TMUX_WINDOW_IDS+=("$window_id")
+    TMUX_WINDOW_SESSION_IDS+=("$session_id")
+    TMUX_WINDOW_SESSION_NAMES+=("$session_name")
+    TMUX_WINDOW_NAMES+=("$name")
+    TMUX_WINDOW_CANONICAL_PATHS+=("$canonical_current_path")
+
+    if [[ -n $stored_path && -d $stored_path ]]; then
+      key="${session_name}"$'\037'"${stored_path}"
+      [[ -n ${TMUX_WORKTREE_WINDOW_BY_PATH[$key]:-} ]] || TMUX_WORKTREE_WINDOW_BY_PATH["$key"]=$window_id
+    fi
+  done < <(tmux list-windows -a -F "$format" 2>/dev/null || true)
+
+  TMUX_WINDOW_SNAPSHOT_LOADED=1
+}
 find_window_for_worktree() {
   local session=$1
   local name=$2
   local path=$3
-  local window_id session_id option stored_path current_name current_path
+  local key index window_id session_id option suffix stored_path current_name current_path
 
-  while IFS='|' read -r window_id session_id; do
+  ((TMUX_WINDOW_SNAPSHOT_LOADED)) || load_tmux_window_snapshot
+
+  key="${session}"$'\037'"${path}"
+  if [[ -n ${TMUX_WORKTREE_WINDOW_BY_PATH[$key]:-} ]]; then
+    printf '%s' "${TMUX_WORKTREE_WINDOW_BY_PATH[$key]}"
+    return 0
+  fi
+
+  # Legacy windows without a recorded path need the slower name/path fallback.
+  for index in "${!TMUX_WINDOW_IDS[@]}"; do
+    [[ ${TMUX_WINDOW_SESSION_NAMES[$index]} == "$session" ]] || continue
+
+    window_id=${TMUX_WINDOW_IDS[$index]}
+    session_id=${TMUX_WINDOW_SESSION_IDS[$index]}
     option=$(worktree_window_option_name "$session_id" "$window_id") || continue
-    stored_path=$(tmux show-options -g -q -v "$option" 2>/dev/null || true)
+    suffix=${option#@tmux_switcher_worktree_path_}
+    stored_path=${TMUX_WORKTREE_WINDOW_PATHS[$suffix]:-}
 
     if [[ $stored_path == "$path" ]]; then
+      TMUX_WORKTREE_WINDOW_BY_PATH["$key"]=$window_id
       printf '%s' "$window_id"
       return 0
     fi
 
     if [[ -z $stored_path || ! -d $stored_path ]]; then
-      current_name=$(tmux display-message -p -t "$window_id" '#{window_name}' 2>/dev/null || true)
-      current_path=$(tmux display-message -p -t "$window_id" '#{pane_current_path}' 2>/dev/null || true)
-      current_path=$(realpath -e -- "$current_path" 2>/dev/null || true)
+      current_name=${TMUX_WINDOW_NAMES[$index]}
+      current_path=${TMUX_WINDOW_CANONICAL_PATHS[$index]}
 
       if [[ $current_name == "$name" && ( $current_path == "$path" || $current_path == "$path"/* ) ]]; then
         tmux set-option -g "$option" "$path" 2>/dev/null || true
+        TMUX_WORKTREE_WINDOW_PATHS["$suffix"]=$path
+        TMUX_WORKTREE_WINDOW_BY_PATH["$key"]=$window_id
         printf '%s' "$window_id"
         return 0
       fi
     fi
-  done < <(tmux list-windows -t "=$session" -F '#{window_id}|#{session_id}' 2>/dev/null)
+  done
+
   return 1
 }
 
@@ -301,10 +389,20 @@ sort_level1_entries() {
   LEVEL1_LABELS=("${labels[@]}")
 }
 
+load_active_sessions() {
+  local live
+
+  ACTIVE_SESSIONS=()
+  while IFS= read -r live; do
+    [[ -n $live ]] && ACTIVE_SESSIONS["$live"]=1
+  done < <(tmux list-sessions -F '#{session_name}' 2>/dev/null || true)
+}
+
 build_level1() {
   local repo_dir repo session live label
   local -A claimed_sessions=()
 
+  load_active_sessions
   LEVEL1_KINDS=()
   LEVEL1_VALUES=()
   LEVEL1_LABELS=()
@@ -314,11 +412,11 @@ build_level1() {
     repo_dir=${repo_dir%/}
     [[ -d $repo_dir/.git || -f $repo_dir/.git ]] || continue
 
-    repo=$(basename "$repo_dir")
+    repo=${repo_dir##*/}
     session=$(session_name_for_repo "$repo")
     claimed_sessions["$session"]=1
 
-    if tmux has-session -t "=$session" 2>/dev/null; then
+    if [[ -n ${ACTIVE_SESSIONS[$session]:-} ]]; then
       label=$repo
     else
       label="$repo (new)"
@@ -327,11 +425,10 @@ build_level1() {
     append_level1_entry repo "$repo" "$label"
   done
 
-  while IFS= read -r live; do
-    [[ -n $live ]] || continue
+  for live in "${!ACTIVE_SESSIONS[@]}"; do
     [[ -n ${claimed_sessions[$live]:-} ]] && continue
     append_level1_entry session "$live" "$live"
-  done < <(tmux list-sessions -F '#{session_name}' 2>/dev/null || true)
+  done
 
   sort_level1_entries
 }
@@ -364,6 +461,7 @@ select_worktree() {
 
   session=$(session_name_for_repo "$repo")
   load_worktrees "$repo" || { error "Could not inspect worktrees for $repo"; return 1; }
+  load_tmux_window_snapshot
 
   if ((${#WORKTREE_NAMES[@]} == 0)); then
     error "No checkout or worktrees found for $repo"
@@ -398,8 +496,9 @@ main() {
   local index repo session primary_name primary_path
 
   [[ -d $PROJECTS_DIR ]] || { error "Projects directory not found: $PROJECTS_DIR"; return 1; }
+  load_session_name_overrides
   local dependency
-  for dependency in fzf git realpath basename awk sort; do
+  for dependency in fzf git realpath sort; do
     command -v "$dependency" >/dev/null 2>&1 || { error "$dependency is required but was not found in PATH"; return 1; }
   done
 

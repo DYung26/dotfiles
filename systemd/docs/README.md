@@ -46,6 +46,7 @@ Playwright MCP should attach to existing EchoProfile browsers through CDP wherev
 
 - VPS: `playwright-mcp.service` attaches to the VPS EchoProfile CDP endpoint and is exposed to MetaMCP on port 8931.
 - Windows laptop: `playwright-mcp-laptop.service` uses the existing laptop CDP SSH tunnel and is exposed on port 8932.
+- Arch and Omarchy Edge: `playwright-mcp-edge.service` uses the profile's configured CDP endpoint or `DevToolsActivePort`; `playwright-mcp-edge-watch` restarts the MCP process when the dynamic DevTools endpoint changes after an Edge restart.
 - Omarchy: `echoprofile-omarchy-cdp-tunnel.service` forwards Omarchy's loopback CDP port 9222 to VPS loopback port 9225. `playwright-mcp-omarchy.service` attaches to that tunnel; MetaMCP connects at `http://host.docker.internal:8933/mcp`.
 
 Enable the Omarchy target on the VPS after deploying and stowing this package:

@@ -8,7 +8,7 @@ Type=simple
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:%h/go/bin:%h/.cargo/bin
 EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
 EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
-ExecStart=%h/Projects/dotfiles/systemd/bin/playwright-mcp edge
+ExecStart=%h/Projects/dotfiles/systemd/bin/playwright-mcp-edge-watch
 WorkingDirectory=%h
 Restart=always
 RestartSec=5

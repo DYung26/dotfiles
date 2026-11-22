@@ -342,3 +342,6 @@ systemd/.config/dotfiles/systemd/systemd.secrets.env
 
 # Machine-local Skilljack source configuration; do not commit.
 skilljack/.skilljack/config.local.json
+
+# AiSP shared environment contains machine-local settings and credentials.
+aisp/.config/aisp/aisp.env

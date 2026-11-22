@@ -6,6 +6,7 @@ case "$mode" in
   laptop) prefix=PLAYWRIGHT_MCP_LAPTOP ;;
   edge) prefix=PLAYWRIGHT_MCP_EDGE ;;
   extension) prefix=PLAYWRIGHT_MCP_EXTENSION ;;
+  omarchy) prefix=PLAYWRIGHT_MCP_OMARCHY ;;
   *) echo "unknown Playwright MCP mode: $mode" >&2; exit 2 ;;
 esac
 getenv() {
@@ -19,36 +20,55 @@ allowed_hosts=$(getenv ALLOWED_HOSTS)
 args=()
 case "$mode" in
   edge)
-    user_data_dir=$(getenv USER_DATA_DIR)
-    [[ -n $user_data_dir ]] || { echo "PLAYWRIGHT_MCP_EDGE_USER_DATA_DIR is required" >&2; exit 2; }
-    devtools_file=${user_data_dir%/}/DevToolsActivePort
-    for attempt in {1..12}; do
-      [[ -r $devtools_file ]] && break
-      sleep 5
-    done
-    if [[ ! -r $devtools_file ]]; then
-      echo "Edge DevToolsActivePort not found: $devtools_file" >&2
-      exit 1
+    endpoint=$(getenv CDP_ENDPOINT)
+    if [[ -z $endpoint ]]; then
+      user_data_dir=$(getenv USER_DATA_DIR)
+      [[ -n $user_data_dir ]] || { echo "PLAYWRIGHT_MCP_EDGE_USER_DATA_DIR or PLAYWRIGHT_MCP_EDGE_CDP_ENDPOINT is required" >&2; exit 2; }
+      devtools_file=${user_data_dir%/}/DevToolsActivePort
+      for attempt in {1..12}; do
+        if [[ -r $devtools_file ]]; then
+          mapfile -t devtools < "$devtools_file"
+          debug_port=${devtools[0]:-}
+          debug_path=${devtools[1]:-}
+          if [[ $debug_port =~ ^[0-9]+$ && $debug_path == /devtools/browser/* ]]; then
+            # Edge may expose the browser WebSocket while its HTTP /json/version
+            # discovery route returns 404. DevToolsActivePort is authoritative.
+            endpoint="ws://127.0.0.1:${debug_port}${debug_path}"
+            break
+          fi
+        fi
+        sleep 5
+      done
+      if [[ -z $endpoint ]]; then
+        echo "Edge DevToolsActivePort did not become ready; check remote-debugging configuration for $user_data_dir" >&2
+        exit 1
+      fi
     fi
-    mapfile -t devtools < "$devtools_file"
-    debug_port=${devtools[0]:-}
-    debug_path=${devtools[1]:-}
-    [[ $debug_port =~ ^[0-9]+$ && $debug_path == /devtools/browser/* ]] || {
-      echo "Invalid Edge DevToolsActivePort file: $devtools_file" >&2
-      exit 1
-    }
-    args+=(--cdp-endpoint="ws://127.0.0.1:${debug_port}${debug_path}")
+    args+=(--cdp-endpoint="$endpoint")
     args+=(--shared-browser-context)
     ;;
+  omarchy)
+    [[ -n $endpoint ]] || { echo "PLAYWRIGHT_MCP_OMARCHY_CDP_ENDPOINT is required" >&2; exit 2; }
+    args+=(--cdp-endpoint="$endpoint")
+    shared_browser_context=$(getenv SHARED_BROWSER_CONTEXT)
+    [[ $shared_browser_context != 1 ]] || args+=(--shared-browser-context)
+    ;;
   extension)
+    extension_token=$(getenv TOKEN)
+    [[ -n $extension_token ]] || { echo "PLAYWRIGHT_MCP_EXTENSION_TOKEN is required in ~/.config/playwright-mcp/edge-default.env; refusing an interactive browser approval flow" >&2; exit 2; }
+    export PLAYWRIGHT_MCP_EXTENSION_TOKEN="$extension_token"
     args+=(--extension)
+    browser=$(getenv BROWSER)
     profile_dir_name=$(getenv PROFILE_DIR_NAME)
     user_data_dir=$(getenv USER_DATA_DIR)
+    executable_path=$(getenv EXECUTABLE_PATH)
     background=$(getenv BACKGROUND)
     session_name=$(getenv SESSION_NAME)
     shared_browser_context=$(getenv SHARED_BROWSER_CONTEXT)
+    [[ -z $browser ]] || args+=(--browser="$browser")
     [[ -z $profile_dir_name ]] || args+=(--profile-dir-name="$profile_dir_name")
     [[ -z $user_data_dir ]] || args+=(--user-data-dir="$user_data_dir")
+    [[ -z $executable_path ]] || args+=(--executable-path="$executable_path")
     [[ $background != 1 ]] || args+=(--background)
     [[ -z $session_name ]] || args+=(--session-name="$session_name")
     [[ $shared_browser_context != 1 ]] || args+=(--shared-browser-context)
@@ -66,5 +86,8 @@ esac
 [[ -z $allowed_hosts ]] || args+=(--allowed-hosts="$allowed_hosts")
 if [[ -n ${PLAYWRIGHT_MCP_NODE_BIN:-} && -n ${PLAYWRIGHT_MCP_CLI:-} ]]; then
   exec "$PLAYWRIGHT_MCP_NODE_BIN" "$PLAYWRIGHT_MCP_CLI" "${args[@]}"
+fi
+if command -v npx >/dev/null 2>&1; then
+  exec npx --yes @playwright/mcp@latest "${args[@]}"
 fi
 exec "$HOME/Projects/dotfiles/systemd/bin/nvm-exec" npx @playwright/mcp@latest "${args[@]}"

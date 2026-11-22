@@ -6,9 +6,10 @@ Wants=network-online.target
 [Service]
 Type=simple
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:%h/go/bin:%h/.cargo/bin
+Environment=NODE_OPTIONS=--dns-result-order=ipv4first
 EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
 EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
-EnvironmentFile=-%h/.config/playwright-mcp/edge-default.env
+EnvironmentFile=%h/.config/playwright-mcp/edge-default.env
 ExecStart=%h/Projects/dotfiles/systemd/bin/playwright-mcp extension
 WorkingDirectory=%h
 Restart=always

@@ -1,4 +1,5 @@
 $ErrorActionPreference = 'Stop'
+$env:NODE_OPTIONS = '--dns-result-order=ipv4first'
 
 $hostAddress = '100.98.45.0'
 $port = 8933
@@ -19,10 +20,15 @@ if (Test-Path $envFile) {
   }
 }
 
+if ([string]::IsNullOrWhiteSpace($env:PLAYWRIGHT_MCP_EXTENSION_TOKEN)) {
+  throw "PLAYWRIGHT_MCP_EXTENSION_TOKEN is missing. Provision it once in $envFile; this service refuses interactive browser approval."
+}
+
 $npx = (Get-Command npx.cmd -ErrorAction Stop).Source
 $mcpArgs = @(
   '--yes', '@playwright/mcp@latest',
   '--extension',
+  '--browser', 'msedge',
   '--port', "$port",
   '--host', $hostAddress,
   '--allowed-hosts', "$hostAddress`:$port",

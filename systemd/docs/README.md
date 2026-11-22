@@ -39,3 +39,24 @@ System-level units use explicit /home/dyung paths because %h in the system manag
 - AiSP bridge: enable `aisp-bridge.service` for the user on the VPS. Its unit is tracked in this package; app-owned runtime configuration remains in `~/.config/aisp/bridge.env` (mode 0600), not in Dotfiles. The service binds to the Tailscale interface and does not require a user-managed bearer token.
 
 The same unit files are deployed everywhere; only the selected device profile, optional local secrets, and enabled-unit links differ.
+
+## Playwright MCP browser targets
+
+Playwright MCP should attach to existing EchoProfile browsers through CDP wherever possible. This reuses the persistent profile and avoids per-session extension approval.
+
+- VPS: `playwright-mcp.service` attaches to the VPS EchoProfile CDP endpoint and is exposed to MetaMCP on port 8931.
+- Windows laptop: `playwright-mcp-laptop.service` uses the existing laptop CDP SSH tunnel and is exposed on port 8932.
+- Omarchy: `echoprofile-omarchy-cdp-tunnel.service` forwards Omarchy's loopback CDP port 9222 to VPS loopback port 9225. `playwright-mcp-omarchy.service` attaches to that tunnel; MetaMCP connects at `http://host.docker.internal:8933/mcp`.
+
+Enable the Omarchy target on the VPS after deploying and stowing this package:
+
+    systemctl --user enable --now echoprofile-omarchy-cdp-tunnel.service
+    systemctl --user enable --now playwright-mcp-omarchy.service
+
+The `playwright-mcp` wrapper accepts the named `omarchy` target and reads `PLAYWRIGHT_MCP_OMARCHY_*` values from the selected VPS profile. The SSH tunnel binds only to VPS loopback; CDP is not exposed on the tailnet or public interfaces.
+
+### Optional Microsoft Playwright Extension mode
+
+CDP is preferred. If an extension-only browser must be used, pre-authorize it with the extension's `PLAYWRIGHT_MCP_EXTENSION_TOKEN` and load that value from a per-profile local secret file such as `~/.config/playwright-mcp/edge-default.env` (mode 0600). Do not put the token in tracked env profiles, MetaMCP configuration, logs, or chat.
+
+The extension service refuses to start without the token, so it cannot fall back to an interactive approval flow. A missing token means the extension transport is unavailable; use CDP or the auto-paired EchoProfile Extension MCP instead.

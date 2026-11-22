@@ -11,3 +11,7 @@ note.md
 docs/_local
 
 /artifacts/
+
+# Local project agent instructions and project-scoped resources.
+AGENTS.md
+agents/

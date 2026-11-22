@@ -3,4 +3,11 @@
 
 
 # Added by Antigravity CLI installer
-export PATH="/home/dyung/.local/bin:$PATH"
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*) ;;
+  *) export PATH="$HOME/.local/bin:$PATH" ;;
+esac
+case ":$PATH:" in
+  *":$HOME/bin:"*) ;;
+  *) export PATH="$HOME/bin:$PATH" ;;
+esac

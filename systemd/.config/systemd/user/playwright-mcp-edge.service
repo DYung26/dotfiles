@@ -1,0 +1,17 @@
+[Unit]
+Description=Playwright MCP Server (Microsoft Edge CDP)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:%h/go/bin:%h/.cargo/bin
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
+ExecStart=%h/Projects/dotfiles/systemd/bin/playwright-mcp edge
+WorkingDirectory=%h
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

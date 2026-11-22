@@ -1,0 +1,18 @@
+[Unit]
+Description=Playwright MCP Server (browser extension)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:%h/go/bin:%h/.cargo/bin
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
+EnvironmentFile=-%h/.config/playwright-mcp/edge-default.env
+ExecStart=%h/Projects/dotfiles/systemd/bin/playwright-mcp extension
+WorkingDirectory=%h
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

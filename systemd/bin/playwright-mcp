@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 mode=${1:-main}
-if [[ $mode == laptop ]]; then prefix=PLAYWRIGHT_MCP_LAPTOP; else prefix=PLAYWRIGHT_MCP; fi
+case "$mode" in
+  main) prefix=PLAYWRIGHT_MCP ;;
+  laptop) prefix=PLAYWRIGHT_MCP_LAPTOP ;;
+  edge) prefix=PLAYWRIGHT_MCP_EDGE ;;
+  extension) prefix=PLAYWRIGHT_MCP_EXTENSION ;;
+  *) echo "unknown Playwright MCP mode: $mode" >&2; exit 2 ;;
+esac
 getenv() {
   local key=${prefix}_$1
   printf '%s' "${!key:-}"
@@ -11,8 +17,50 @@ port=$(getenv PORT)
 host=$(getenv HOST)
 allowed_hosts=$(getenv ALLOWED_HOSTS)
 args=()
-[[ -z $endpoint ]] || args+=(--cdp-endpoint="$endpoint")
-[[ -n $endpoint ]] || args+=(--browser=chromium)
+case "$mode" in
+  edge)
+    user_data_dir=$(getenv USER_DATA_DIR)
+    [[ -n $user_data_dir ]] || { echo "PLAYWRIGHT_MCP_EDGE_USER_DATA_DIR is required" >&2; exit 2; }
+    devtools_file=${user_data_dir%/}/DevToolsActivePort
+    for attempt in {1..12}; do
+      [[ -r $devtools_file ]] && break
+      sleep 5
+    done
+    if [[ ! -r $devtools_file ]]; then
+      echo "Edge DevToolsActivePort not found: $devtools_file" >&2
+      exit 1
+    fi
+    mapfile -t devtools < "$devtools_file"
+    debug_port=${devtools[0]:-}
+    debug_path=${devtools[1]:-}
+    [[ $debug_port =~ ^[0-9]+$ && $debug_path == /devtools/browser/* ]] || {
+      echo "Invalid Edge DevToolsActivePort file: $devtools_file" >&2
+      exit 1
+    }
+    args+=(--cdp-endpoint="ws://127.0.0.1:${debug_port}${debug_path}")
+    args+=(--shared-browser-context)
+    ;;
+  extension)
+    args+=(--extension)
+    profile_dir_name=$(getenv PROFILE_DIR_NAME)
+    user_data_dir=$(getenv USER_DATA_DIR)
+    background=$(getenv BACKGROUND)
+    session_name=$(getenv SESSION_NAME)
+    shared_browser_context=$(getenv SHARED_BROWSER_CONTEXT)
+    [[ -z $profile_dir_name ]] || args+=(--profile-dir-name="$profile_dir_name")
+    [[ -z $user_data_dir ]] || args+=(--user-data-dir="$user_data_dir")
+    [[ $background != 1 ]] || args+=(--background)
+    [[ -z $session_name ]] || args+=(--session-name="$session_name")
+    [[ $shared_browser_context != 1 ]] || args+=(--shared-browser-context)
+    ;;
+  *)
+    if [[ -n $endpoint ]]; then
+      args+=(--cdp-endpoint="$endpoint")
+    else
+      args+=(--browser=chromium)
+    fi
+    ;;
+esac
 [[ -z $port ]] || args+=(--port="$port")
 [[ -z $host ]] || args+=(--host="$host")
 [[ -z $allowed_hosts ]] || args+=(--allowed-hosts="$allowed_hosts")

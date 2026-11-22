@@ -127,3 +127,7 @@ if command -v gpg-connect-agent >/dev/null 2>&1; then
   export GPG_TTY="$(tty 2>/dev/null || true)"
   [[ -n "$GPG_TTY" ]] && gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true
 fi
+
+
+# Added by Antigravity CLI installer
+export PATH="/home/dyung/.local/bin:$PATH"

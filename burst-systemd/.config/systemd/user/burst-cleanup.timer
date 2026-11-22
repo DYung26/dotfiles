@@ -1,0 +1,11 @@
+[Unit]
+Description=Hourly cleanup of expired BURST deployments
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=5m
+Unit=burst-cleanup.service
+
+[Install]
+WantedBy=timers.target

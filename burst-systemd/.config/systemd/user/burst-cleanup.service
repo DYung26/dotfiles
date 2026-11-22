@@ -1,0 +1,12 @@
+[Unit]
+Description=Clean up expired BURST deployments
+ConditionPathExists=%h/Projects/burst/bin/burst
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Projects/burst
+Environment=PATH=%h/Projects/burst/bin:%h/.local/bin:%h/bin:/usr/local/bin:/usr/bin
+EnvironmentFile=-%h/.config/burst/providers.env
+ExecStart=/usr/bin/env burst apps cleanup
+TimeoutStartSec=15min
+Nice=10

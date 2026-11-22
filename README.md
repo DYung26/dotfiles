@@ -89,7 +89,7 @@ Only one Bash profile should own `~/.bashrc` on a host. Other shell and applicat
 These are home-directory packages when the host uses them:
 
 - Shell and terminal: `bash-*`, `zsh`, `ble`, `starship`, `alacritty`, `wezterm`, `tmux`, `tmuxp`, `htop`.
-- Shared tools: `bin`, `git`, `ssh`, `nvim`, `stowrc`.
+- Shared tools: `bin`, `git`, `ssh`, `nvim`, `stowrc`. The bin package provides the burst and backwards-compatible cs-burst shims, which execute the separately versioned ~/Projects/burst project.
 - GitHub CLI: `gh` plus only the relevant `gh-<account>` profile packages. Account-specific `hosts.yml` files are local authentication state, not portable configuration.
 - Desktop integrations: `input-leap`, `input-leap-gui`, and `pulse` only on hosts that actually use those services. Omarchy's `hyprland` package contains only `~/.config/hypr/hyprland.lua`; it loads Omarchy's own defaults and the other personal modules remain Omarchy-managed local files. Pulse runs its daemon on the VPS; the Arch GNOME extension reaches that same socket through `pulse-socket-forward.service`.
 - MCP integrations: `mcp`, `mcp-shell-privileged`, `workspace-mcp`, and `metamcp-ops` only on the hosts where their applications run. The `aisp` package is VPS-only and Stows the shared AiSP CLI/MCP environment file; the real `aisp.env` is ignored by Git and Syncthing. `aisp.env.example` is tracked by Git, while the existing `*env*` Syncthing rule keeps it out of file sync. `metamcp-ops` is VPS-only; its local ignored environment file is mode 600 and its systemd unit is tracked in the `systemd` package. `mcp-relay` is paused and VPS-only: its default port conflicts with MetaMCP Ops, its environment is absent, and its watcher still needs authentication and end-to-end failover validation.
@@ -104,6 +104,7 @@ These are home-directory packages when the host uses them:
 - `networkmanager-wifi-reconnect`: archived; its README documents the historical setup. Do not install it as an active package.
 - `systemd`: special dual-target package described above.
 - `workpulse`: VPS-only, single-unit package for the Workpulse monitor. Stow it independently with `stow --no-folding --target="$HOME" workpulse`; do not stow the broader `systemd` package just to install this unit.
+- `burst-systemd`: optional user-level timer for hourly cleanup of expired BURST deployments. Stow independently with `stow --no-folding --target=$HOME burst-systemd`; intended for Arch hosts with ~/Projects/burst checked out.
 
 A directory at the repository root is not automatically a package to install on every machine. Read its README and inspect its target paths first.
 

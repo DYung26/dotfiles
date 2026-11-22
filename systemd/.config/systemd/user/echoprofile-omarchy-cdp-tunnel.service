@@ -1,0 +1,17 @@
+[Unit]
+Description=SSH tunnel to Omarchy EchoProfile Chromium CDP
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
+ExecStart=/usr/bin/ssh -N -o BatchMode=yes -o ConnectTimeout=10 -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 127.0.0.1:${ECHOPROFILE_OMARCHY_LOCAL_PORT}:127.0.0.1:${ECHOPROFILE_OMARCHY_REMOTE_PORT} ${ECHOPROFILE_OMARCHY_SSH_USER}@${ECHOPROFILE_OMARCHY_TAILNET_IP}
+Restart=always
+RestartSec=10
+KillMode=process
+TimeoutStopSec=10
+
+[Install]
+WantedBy=default.target

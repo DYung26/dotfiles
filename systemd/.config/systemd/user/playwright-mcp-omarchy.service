@@ -1,0 +1,21 @@
+[Unit]
+Description=Playwright MCP server for Omarchy EchoProfile Chromium
+Requires=echoprofile-omarchy-cdp-tunnel.service
+After=network-online.target echoprofile-omarchy-cdp-tunnel.service
+PartOf=echoprofile-omarchy-cdp-tunnel.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:%h/go/bin:%h/.cargo/bin
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env.common
+EnvironmentFile=%h/.config/dotfiles/systemd/systemd.env
+ExecStart=%h/Projects/dotfiles/systemd/bin/playwright-mcp omarchy
+WorkingDirectory=%h
+Restart=on-failure
+RestartSec=5
+KillMode=process
+TimeoutStopSec=10
+
+[Install]
+WantedBy=default.target

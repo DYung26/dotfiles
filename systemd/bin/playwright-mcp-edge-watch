@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+mcp_launcher=${PLAYWRIGHT_MCP_EDGE_WATCH_MCP_BIN:-"$HOME/Projects/dotfiles/systemd/bin/playwright-mcp"}
+user_data_dir=${PLAYWRIGHT_MCP_EDGE_USER_DATA_DIR:-}
+cdp_endpoint=${PLAYWRIGHT_MCP_EDGE_CDP_ENDPOINT:-}
+
+if [[ -z $user_data_dir ]]; then
+  exec "$mcp_launcher" edge
+fi
+
+devtools_file="${user_data_dir%/}/DevToolsActivePort"
+child=""
+
+stop() {
+  if [[ -n $child ]] && kill -0 "$child" 2>/dev/null; then
+    kill -TERM "$child" 2>/dev/null || true
+    wait "$child" 2>/dev/null || true
+  fi
+  exit 0
+}
+trap stop TERM INT
+
+while true; do
+  # A fixed CDP endpoint does not create DevToolsActivePort. When the file is
+  # present, still watch it because a browser restart can change its WS path.
+  if [[ -z $cdp_endpoint ]]; then
+    while [[ ! -r $devtools_file ]]; do sleep 2; done
+  else
+    if [[ ! -r $devtools_file ]]; then
+      exec "$mcp_launcher" edge
+    fi
+  fi
+
+  baseline=$(cat "$devtools_file" 2>/dev/null || true)
+  if [[ -z $baseline ]]; then
+    sleep 2
+    continue
+  fi
+
+  printf 'Starting Edge Playwright MCP; watching %s for endpoint changes\n' "$devtools_file" >&2
+  "$mcp_launcher" edge &
+  child=$!
+
+  while kill -0 "$child" 2>/dev/null; do
+    sleep 2
+    current=$(cat "$devtools_file" 2>/dev/null || true)
+    if [[ -n $current && $current != "$baseline" ]]; then
+      printf 'Edge DevToolsActivePort changed; restarting Playwright MCP\n' >&2
+      kill -TERM "$child" 2>/dev/null || true
+      wait "$child" 2>/dev/null || true
+      child=""
+      break
+    fi
+  done
+
+  if [[ -n $child ]]; then
+    wait "$child" 2>/dev/null || true
+    child=""
+  fi
+  sleep 2
+done

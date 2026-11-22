@@ -15,6 +15,22 @@ fi
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
 DOTFILES_ROOT="$(cd "$(dirname "$SCRIPT_PATH")/../.." && pwd)"
 NVM_EXEC="$DOTFILES_ROOT/systemd/bin/nvm-exec"
+uses_extension=0
+for arg in "$@"; do
+  [[ $arg == --extension || $arg == --extension=* ]] && uses_extension=1
+done
+if (( uses_extension )) && [[ -z "${PLAYWRIGHT_MCP_EXTENSION_TOKEN:-}" ]]; then
+  token_file=${PLAYWRIGHT_MCP_EXTENSION_TOKEN_FILE:-"$HOME/.config/playwright-mcp/echoprofile.env"}
+  if [[ -r $token_file ]]; then
+    while IFS='=' read -r key value; do
+      [[ $key == PLAYWRIGHT_MCP_EXTENSION_TOKEN ]] && export PLAYWRIGHT_MCP_EXTENSION_TOKEN="$value"
+    done < "$token_file"
+  fi
+  [[ -n "${PLAYWRIGHT_MCP_EXTENSION_TOKEN:-}" ]] || {
+    echo "Playwright Extension token missing. Provision it once in $token_file; refusing interactive browser approval." >&2
+    exit 2
+  }
+fi
 if [[ -x "$NVM_EXEC" ]]; then
   exec "$NVM_EXEC" playwright-cli "$@"
 fi

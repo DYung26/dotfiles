@@ -203,7 +203,7 @@ worktree_window_option_name() {
 
 load_tmux_window_snapshot() {
   local option value suffix window_id session_id session_name name current_path canonical_current_path stored_path key
-  local separator=
+  local separator=$'\037' format
 
   TMUX_WORKTREE_WINDOW_PATHS=()
   TMUX_WORKTREE_WINDOW_BY_PATH=()
@@ -221,10 +221,10 @@ load_tmux_window_snapshot() {
     TMUX_WORKTREE_WINDOW_PATHS["$suffix"]=$value
   done < <(tmux show-options -g -F '#{option_name}|#{option_value}' 2>/dev/null || true)
 
-  # Use a control-character separator so valid names containing pipes (or
-  # ordinary whitespace) cannot shift the metadata columns.
-  format="#{window_id}\${separator}#{session_id}\${separator}#{session_name}\${separator}#{window_name}\${separator}#{pane_current_path}"
-  while IFS=
+  # A control-character separator prevents names containing pipes from
+  # shifting the metadata columns.
+  format="#{window_id}${separator}#{session_id}${separator}#{session_name}${separator}#{window_name}${separator}#{pane_current_path}"
+  while IFS=$'\037' read -r window_id session_id session_name name current_path; do
     [[ -n $window_id ]] || continue
 
     option=$(worktree_window_option_name "$session_id" "$window_id") || continue
@@ -250,7 +250,6 @@ load_tmux_window_snapshot() {
 
   TMUX_WINDOW_SNAPSHOT_LOADED=1
 }
-
 find_window_for_worktree() {
   local session=$1
   local name=$2

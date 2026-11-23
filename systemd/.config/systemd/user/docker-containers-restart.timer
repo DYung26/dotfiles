@@ -1,5 +1,5 @@
 [Unit]
-Description=Restart all running Docker containers every three hours
+Description=Restart explicitly allowlisted Docker containers every three hours
 
 [Timer]
 OnActiveSec=3h

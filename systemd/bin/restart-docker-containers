@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+readonly REPO_ROOT="${DOTFILES_REPO:-$HOME/Projects/dotfiles}"
+readonly DEVICE_NAME="$(cat /etc/hostname)"
+readonly ALLOWLIST_FILE="${DOCKER_RESTART_ALLOWLIST:-$REPO_ROOT/.restart-docker-containers.$DEVICE_NAME.conf}"
+
+log() {
+  printf '[restart-docker-containers] %s\n' "$*"
+}
+
+for command in docker grep realpath; do
+  command -v "$command" >/dev/null 2>&1 || {
+    log "ERROR: required command not found: $command"
+    exit 1
+  }
+done
+
+if [[ ! -f "$ALLOWLIST_FILE" ]]; then
+  log "No device allowlist found; no containers will be restarted"
+  exit 0
+fi
+
+repo_real="$(realpath -e -- "$REPO_ROOT")"
+allowlist_real="$(realpath -e -- "$ALLOWLIST_FILE")"
+[[ "$allowlist_real" == "$repo_real"/* ]] || {
+  log "ERROR: allowlist must be inside $repo_real"
+  exit 1
+}
+
+declare -a ALLOWED_CONTAINERS=()
+while IFS= read -r container; do
+  [[ -z "$container" || "$container" == \#* ]] && continue
+  [[ "$container" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]] || {
+    log "ERROR: invalid container name: $container"
+    exit 1
+  }
+  ALLOWED_CONTAINERS+=("$container")
+done < "$ALLOWLIST_FILE"
+
+if (( ${#ALLOWED_CONTAINERS[@]} == 0 )); then
+  log "Device allowlist is empty; no containers will be restarted"
+  exit 0
+fi
+
+readonly RUNNING_CONTAINERS="$(docker ps --format '{{.Names}}')"
+restarted=0
+skipped=0
+failed=0
+
+is_protected_container() {
+  local name="$1"
+  local metadata="$2"
+  local image service
+  IFS='|' read -r _ image service <<< "$metadata"
+
+  case "$name" in
+    metamcp|metamcp-*|workspace-mcp|notify|pgadmin*|multica-*|mcp|mcp-*|cloudflared|cloudflared-*|playwright-mcp*|echoprofile*|*-postgres*|*-mysql*|*-mariadb*|*-redis*|*-mongo*)
+      return 0
+      ;;
+  esac
+
+  case "${service,,} ${image,,}" in
+    *postgres*|*mysql*|*mariadb*|*redis*|*mongo*|*metamcp*|*workspace-mcp*|*mcp-server*|*mcp-shell*|*cloudflared*|*playwright-mcp*|*echoprofile*|*pgadmin*)
+      return 0
+      ;;
+  esac
+
+  return 1
+}
+
+for name in "${ALLOWED_CONTAINERS[@]}"; do
+  if ! grep -Fxq -- "$name" <<< "$RUNNING_CONTAINERS"; then
+    log "SKIP $name: not running"
+    ((skipped += 1))
+    continue
+  fi
+
+  metadata="$(docker inspect --format '{{.Name}}|{{.Config.Image}}|{{index .Config.Labels "com.docker.compose.service"}}' "$name")"
+  if [[ "$metadata" != "/$name|"* ]]; then
+    log "ERROR $name: Docker returned unexpected container metadata"
+    ((failed += 1))
+    continue
+  fi
+
+  if is_protected_container "$name" "$metadata"; then
+    log "SKIP $name: protected database or control-plane workload"
+    ((skipped += 1))
+    continue
+  fi
+
+  if [[ "${DRY_RUN:-0}" == "1" ]]; then
+    log "WOULD RESTART $name"
+    ((restarted += 1))
+    continue
+  fi
+
+  log "Restarting $name"
+  if docker restart "$name" >/dev/null; then
+    log "OK $name"
+    ((restarted += 1))
+  else
+    log "ERROR restarting $name"
+    ((failed += 1))
+  fi
+done
+
+log "Finished: restarted=$restarted skipped=$skipped failed=$failed"
+(( failed == 0 ))

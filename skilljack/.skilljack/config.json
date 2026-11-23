@@ -1,6 +1,14 @@
 {
   "skillDirectories": [
     "/home/dyung/Projects/skills",
+    "/home/dyung/Projects/grove/.agents/skills",
+    "/home/dyung/Projects/chronix/.agents/skills",
+    "/home/dyung/Projects/aisp/.agents/skills",
+    "/home/dyung/Projects/burst/.agents/skills",
+    "/home/dyung/Projects/dotfiles/.agents/skills",
+    "/home/dyung/Projects/mdsync/.agents/skills",
+    "/home/dyung/Projects/echoprofile/.agents/skills",
+    "/home/dyung/Projects/vsend/.agents/skills",
     "github.com/anthropics/skills/skills",
     "github.com/GoogleChrome/modern-web-guidance/skills",
     "github.com/vercel-labs/agent-browser/skill-data",
@@ -35,6 +43,10 @@
   "skillInvocationOverrides": {
     "skills__shell-execution-discipline": {
       "assistant": true
+    },
+    "skills__vsend-cli": {
+      "assistant": false,
+      "user": true
     }
   },
   "staticMode": false,

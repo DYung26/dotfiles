@@ -19,4 +19,4 @@ args=()
 if [[ -n ${PLAYWRIGHT_MCP_NODE_BIN:-} && -n ${PLAYWRIGHT_MCP_CLI:-} ]]; then
   exec "$PLAYWRIGHT_MCP_NODE_BIN" "$PLAYWRIGHT_MCP_CLI" "${args[@]}"
 fi
-exec "$HOME/Projects/dotfiles/systemd/bin/nvm-exec" npx @playwright/mcp@latest "${args[@]}"
+exec "$HOME/Projects/dotfiles/systemd/bin/nvm-exec" npx --yes @playwright/mcp@latest "${args[@]}"

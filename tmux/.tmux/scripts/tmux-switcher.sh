@@ -251,9 +251,8 @@ load_tmux_window_snapshot() {
 }
 find_window_for_worktree() {
   local session=$1
-  local name=$2
-  local path=$3
-  local key index window_id session_id option suffix stored_path current_name current_path
+  local path=$2
+  local key index window_id session_id option suffix stored_path current_path
 
   ((TMUX_WINDOW_SNAPSHOT_LOADED)) || load_tmux_window_snapshot
 
@@ -316,7 +315,7 @@ switch_to_worktree() {
 
   if tmux has-session -t "=$session" 2>/dev/null; then
     session_exists=1
-    if window_id=$(find_window_for_worktree "$session" "$name" "$path"); then
+    if window_id=$(find_window_for_worktree "$session" "$path"); then
       switch_to_window "$session" "$window_id"
       return
     fi
@@ -470,7 +469,7 @@ select_worktree() {
     for index in "${!WORKTREE_NAMES[@]}"; do
       name=${WORKTREE_NAMES[$index]}
       path=${WORKTREE_PATHS[$index]}
-      if window_id=$(find_window_for_worktree "$session" "$name" "$path"); then
+      if window_id=$(find_window_for_worktree "$session" "$path"); then
         label="$name  [open]"
       else
         label="$name  [new]"

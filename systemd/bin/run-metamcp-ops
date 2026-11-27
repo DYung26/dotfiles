@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-project_root="${METAMCP_OPS_PROJECT_ROOT:-$HOME/Projects/metamcp.wt/ai-dev/apps/backend}"
+project_root="${METAMCP_OPS_PROJECT_ROOT:-$HOME/Projects/metamcp.wt/ai-dev-deploy/apps/backend}"
 node_bin="${METAMCP_OPS_NODE_BIN:-$HOME/.local/bin/node}"
 entrypoint="$project_root/dist/metamcp-ops.js"
 

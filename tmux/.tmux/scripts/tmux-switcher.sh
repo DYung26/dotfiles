@@ -230,11 +230,10 @@ load_tmux_window_snapshot() {
     option=$(worktree_window_option_name "$session_id" "$window_id") || continue
     suffix=${option#@tmux_switcher_worktree_path_}
     stored_path=${TMUX_WORKTREE_WINDOW_PATHS[$suffix]:-}
-    if [[ -n $stored_path && -d $stored_path ]]; then
-      canonical_current_path=
-    else
-      canonical_current_path=$(realpath -e -- "$current_path" 2>/dev/null || true)
-    fi
+    # Always resolve the live pane path. Stored metadata can be absent or
+    # stale (for example after a window/session is relinked), and must not
+    # prevent the live checkout path from identifying an open worktree.
+    canonical_current_path=$(realpath -e -- "$current_path" 2>/dev/null || true)
 
     TMUX_WINDOW_IDS+=("$window_id")
     TMUX_WINDOW_SESSION_IDS+=("$session_id")
@@ -252,9 +251,8 @@ load_tmux_window_snapshot() {
 }
 find_window_for_worktree() {
   local session=$1
-  local name=$2
-  local path=$3
-  local key index window_id session_id option suffix stored_path current_name current_path
+  local path=$2
+  local key index window_id session_id option suffix stored_path current_path
 
   ((TMUX_WINDOW_SNAPSHOT_LOADED)) || load_tmux_window_snapshot
 
@@ -280,17 +278,16 @@ find_window_for_worktree() {
       return 0
     fi
 
-    if [[ -z $stored_path || ! -d $stored_path ]]; then
-      current_name=${TMUX_WINDOW_NAMES[$index]}
-      current_path=${TMUX_WINDOW_CANONICAL_PATHS[$index]}
-
-      if [[ $current_name == "$name" && ( $current_path == "$path" || $current_path == "$path"/* ) ]]; then
-        tmux set-option -g "$option" "$path" 2>/dev/null || true
-        TMUX_WORKTREE_WINDOW_PATHS["$suffix"]=$path
-        TMUX_WORKTREE_WINDOW_BY_PATH["$key"]=$window_id
-        printf '%s' "$window_id"
-        return 0
-      fi
+    # The pane's live cwd is an independent source of truth. Check it even
+    # when a valid-but-stale stored path exists, and do not depend on the
+    # window name (tmux may auto-rename an nvim window).
+    current_path=${TMUX_WINDOW_CANONICAL_PATHS[$index]}
+    if [[ -n $current_path && ( $current_path == "$path" || $current_path == "$path"/* ) ]]; then
+      tmux set-option -g "$option" "$path" 2>/dev/null || true
+      TMUX_WORKTREE_WINDOW_PATHS["$suffix"]=$path
+      TMUX_WORKTREE_WINDOW_BY_PATH["$key"]=$window_id
+      printf '%s' "$window_id"
+      return 0
     fi
   done
 
@@ -318,7 +315,7 @@ switch_to_worktree() {
 
   if tmux has-session -t "=$session" 2>/dev/null; then
     session_exists=1
-    if window_id=$(find_window_for_worktree "$session" "$name" "$path"); then
+    if window_id=$(find_window_for_worktree "$session" "$path"); then
       switch_to_window "$session" "$window_id"
       return
     fi
@@ -472,7 +469,7 @@ select_worktree() {
     for index in "${!WORKTREE_NAMES[@]}"; do
       name=${WORKTREE_NAMES[$index]}
       path=${WORKTREE_PATHS[$index]}
-      if window_id=$(find_window_for_worktree "$session" "$name" "$path"); then
+      if window_id=$(find_window_for_worktree "$session" "$path"); then
         label="$name  [open]"
       else
         label="$name  [new]"
